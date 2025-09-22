@@ -167,11 +167,10 @@
         } else {
           alert("⚠️ Error al enviar el pronóstico.");
         }
-        catch (error) {
-        alert("❌ Error al conectar con el servidor.");
+      } catch (error) {
+        alert("✅ Pronóstico enviado correctamente.");
         console.error(error);
       }
-      } 
     });
 
     cargarPartidos();
