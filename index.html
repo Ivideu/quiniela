@@ -138,6 +138,7 @@
       try {
         const res = await fetch(API_URL, {
           method: "POST",
+          mode: "cors", // 👈 Aquí lo añades
           headers: {
             "Content-Type": "application/json"
           },
