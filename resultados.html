@@ -117,29 +117,31 @@
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
 
-    async function cargarResultados() {
-      try {
-        const res = await fetch(API_URL);
-        const { partidos, pronosticos } = await res.json();
-        const resultados = partidos.slice(1).map(p => p[3]);
+async function cargarResultados() {
+  try {
+    const res = await fetch(API_URL);
+    const { partidos, pronosticos } = await res.json();
 
-        const tabla = document.getElementById("tablaResultados");
-        pronosticos.slice(1).forEach(fila => {
-          const nombre = fila[0];
-          const aciertos = fila.slice(1).reduce((acc, val, i) => {
-            return acc + (val === resultados[i] ? 1 : 0);
-          }, 0);
+    // Ajusta el índice si los resultados están en otra columna
+    const resultados = partidos.slice(1).map(p => String(p[3]));
 
-          const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
-          tabla.appendChild(tr);
-        });
-      } catch (error) {
-        console.error("Error al cargar los resultados:", error);
-      }
-    }
+    const tabla = document.getElementById("tablaResultados");
+    pronosticos.slice(1).forEach(fila => {
+      const nombre = fila[0];
+      const aciertos = fila.slice(1).reduce((acc, val, i) => {
+        return acc + (String(val) === resultados[i] ? 1 : 0);
+      }, 0);
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
+      tabla.appendChild(tr);
+    });
+  } catch (error) {
+    console.error("Error al cargar los resultados:", error);
+  }
+}
 
     cargarResultados();
   </script>
