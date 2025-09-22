@@ -1,130 +1,91 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pronósticos Registrados</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pronósticos - Quiniela</title>
   <style>
-    * { box-sizing: border-box; }
-
     body {
       font-family: 'Segoe UI', sans-serif;
       background-color: #f4f6f8;
       margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      align-items: flex-start;
-      text-align: center;
+      padding: 20px;
     }
-
     .container {
-      max-width: 700px;
-      width: 100%;
+      max-width: 1000px;
+      margin: auto;
       background: #fff;
-      margin: 40px 20px;
       padding: 30px;
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
-
     h1 {
-      background-color: #0077cc;
-      color: white;
-      padding: 15px;
-      border-radius: 12px;
+      text-align: center;
       margin-bottom: 20px;
-      font-size: 22px;
+      color: #333;
     }
-
     table {
       width: 100%;
-      margin-top: 10px;
-      border-collapse: separate;
-      border-spacing: 0;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
-
-    thead {
-      background-color: #0077cc;
-      color: white;
-    }
-
-    thead th {
-      padding: 10px;
+      border-collapse: collapse;
+      margin-top: 20px;
       font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
       text-align: center;
     }
-
-    tbody td {
-      padding: 10px;
-      font-size: 13px;
-      background-color: #eaf4fc;
-      border-bottom: 1px solid #cce0f5;
-      text-align: center;
+    th {
+      background: #0077cc;
+      color: #fff;
     }
-
-    tbody tr:last-child td {
-      border-bottom: none;
+    tr:nth-child(even) {
+      background: #f9f9f9;
     }
-
-    button {
-      margin-top: 25px;
-      width: 100%;
-      padding: 12px;
-      font-size: 16px;
-      background-color: #0077cc;
+    a {
+      display: inline-block;
+      margin-top: 20px;
+      text-decoration: none;
+      background: #0077cc;
       color: white;
-      border: none;
+      padding: 10px 15px;
       border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    button:hover {
-      background-color: #005fa3;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Pronósticos Registrados</h1>
-    <table>
+    <h1>Pronósticos</h1>
+    <table id="tablaPronosticos">
       <thead>
-        <tr>
-          <th>Nombre</th>
-          <!-- Generar columnas P1 a P14 -->
-          <script>
-            for (let i = 1; i <= 14; i++) {
-              document.write(`<th>P${i}</th>`);
-            }
-          </script>
-        </tr>
+        <tr id="headerRow"></tr>
       </thead>
-      <tbody id="tablaPronosticos"></tbody>
+      <tbody></tbody>
     </table>
-
-    <button onclick="location.href='index.html'">Volver</button>
-    <button onclick="location.href='resultados.html'">resultados</button>
+    <a href="index.html">⬅ Volver</a>
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
+    const API_URL = "/api";
 
     async function cargarPronosticos() {
-      const res = await fetch(API_URL);
-      const { pronosticos } = await res.json();
-      const tabla = document.getElementById("tablaPronosticos");
-      tabla.innerHTML = "";
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        const pronosticos = data.pronosticos;
 
-      pronosticos.slice(1).forEach(fila => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${fila[0]}</td>` + fila.slice(1).map(p => `<td>${p}</td>`).join("");
-        tabla.appendChild(tr);
-      });
+        const header = document.getElementById("headerRow");
+        header.innerHTML = pronosticos[0].map(col => `<th>${col}</th>`).join("");
+
+        const tbody = document.querySelector("#tablaPronosticos tbody");
+        pronosticos.slice(1).forEach(row => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = row.map(col => `<td>${col}</td>`).join("");
+          tbody.appendChild(tr);
+        });
+      } catch (error) {
+        console.error("Error cargando pronósticos:", error);
+      }
     }
 
     cargarPronosticos();
