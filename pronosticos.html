@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pronósticos</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      align-items: flex-start;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 500px;
+      width: 100%;
+      background: #fff;
+      margin: 40px 20px;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    h1 {
+      background-color: #0077cc;
+      color: white;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 22px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+      color: #333;
+      text-align: left;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .grid input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background-color: #0077cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #005fa3;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 30px;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    thead {
+      background-color: #0077cc;
+      color: white;
+    }
+
+    thead th {
+      padding: 10px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    tbody td {
+      padding: 10px;
+      font-size: 13px;
+      background-color: #eaf4fc;
+      border-bottom: 1px solid #cce0f5;
+      text-align: center;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .message {
+      margin-top: 15px;
+      font-weight: bold;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Enviar Pronóstico</h1>
+    <form id="formPronostico">
+      <label for="nombre">Nombre:</label>
+      <input type="text" id="nombre" name="nombre" required />
+
+      <div class="grid">
+        <!-- Campos P1 a P14 -->
+        <script>
+          for (let i = 1; i <= 14; i++) {
+            document.write(`<input type="text" name="p${i}" placeholder="P${i}" required />`);
+          }
+        </script>
+      </div>
+
+      <button type="submit">Enviar</button>
+      <div class="message" id="mensaje"></div>
+    </form>
+
+    <h1>Pronósticos Registrados</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th colspan="14">Pronósticos</th>
+        </tr>
+      </thead>
+      <tbody id="tablaPronosticos"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
+
+    // Mostrar tabla de pronósticos
+    async function cargarPronosticos() {
+      const res = await fetch(API_URL);
+      const { pronosticos } = await res.json();
+      const tabla = document.getElementById("tablaPronosticos");
+      tabla.innerHTML = "";
+
+      pronosticos.slice(1).forEach(fila => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${fila[0]}</td>` + fila.slice(1).map(p => `<td>${p}</td>`).join("");
+        tabla.appendChild(tr);
+      });
+    }
+
+    cargarPronosticos();
+
+    // Enviar nuevo pronóstico
+    document.getElementById("formPronostico").addEventListener("submit", async e => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        nombre: form.nombre.value
+      };
+      for (let i = 1; i <= 14; i++) {
+        data["p" + i] = form["p" + i].value;
+      }
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      const result = await res.json();
+      if (result.resultado === "ok") {
+        document.getElementById("mensaje").textContent = "Pronóstico enviado correctamente.";
+        form.reset();
+        cargarPronosticos();
+      } else {
+        document.getElementById("mensaje").textContent = "Error al enviar el pronóstico.";
+      }
+    });
+  </script>
+</body>
+</html>
