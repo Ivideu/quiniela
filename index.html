@@ -167,6 +167,10 @@
         } else {
           alert("⚠️ Error al enviar el pronóstico.");
         }
+        catch (error) {
+        alert("❌ Error al conectar con el servidor.");
+        console.error(error);
+      }
       } 
     });
 
