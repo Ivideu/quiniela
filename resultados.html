@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
- <!DOCTYPE html>
-<html lang="es">
-<head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Resultados</title>
@@ -11,42 +8,6 @@
     * {
       box-sizing: border-box;
     }
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin-top: 20px;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 0 10px rgba(0,0,0,0.05);
-}
-
-thead {
-  background-color: #0077cc;
-  color: white;
-}
-
-thead th {
-  padding: 12px;
-  font-size: 16px;
-  text-align: left;
-}
-
-tbody td {
-  padding: 12px;
-  font-size: 15px;
-  color: #333;
-  background-color: #eaf4fc;
-  border-bottom: 1px solid #cce0f5;
-}
-
-tbody tr:last-child td {
-  border-bottom: none;
-}
-
-tbody tr:hover td {
-  background-color: #d4e9fb;
-}
 
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -60,7 +21,7 @@ tbody tr:hover td {
     }
 
     .container {
-      max-width: 600px;
+      max-width: 400px;
       width: 100%;
       background: #fff;
       margin: 40px 20px;
@@ -69,27 +30,54 @@ tbody tr:hover td {
       box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
 
-    h1 {
+    .header-box {
+      background-color: #0077cc;
+      color: white;
+      padding: 15px;
+      border-radius: 12px;
       text-align: center;
       margin-bottom: 20px;
-      color: #333;
     }
 
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-      color: #555;
+    .header-box h1 {
+      margin: 0;
+      font-size: 20px;
     }
 
-    input[type="text"],
-    select {
+    table {
       width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    thead {
+      background-color: #0077cc;
+      color: white;
+    }
+
+    thead th {
+      padding: 12px;
       font-size: 16px;
+      text-align: left;
+    }
+
+    tbody td {
+      padding: 12px;
+      font-size: 15px;
+      color: #333;
+      background-color: #eaf4fc;
+      border-bottom: 1px solid #cce0f5;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover td {
+      background-color: #d4e9fb;
     }
 
     button {
@@ -108,42 +96,47 @@ tbody tr:hover td {
     button:hover {
       background-color: #005fa3;
     }
-
-    .match {
-      margin-top: 10px;
-    }
   </style>
-
- 
 </head>
 <body>
-  <h1>Clasificación de Aciertos</h1>
-  <table border="1">
-    <thead>
-      <tr><th>Jugador</th><th>Aciertos</th></tr>
-    </thead>
-    <tbody id="tablaResultados"></tbody>
-  </table>
+  <div class="container">
+    <div class="header-box">
+      <h1>Clasificación de Aciertos</h1>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Jugador</th><th>Aciertos</th></tr>
+      </thead>
+      <tbody id="tablaResultados"></tbody>
+    </table>
+
+    <button onclick="location.href='index.html'">Volver</button>
+  </div>
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
 
     async function cargarResultados() {
-      const res = await fetch(API_URL);
-      const { partidos, pronosticos } = await res.json();
-      const resultados = partidos.slice(1).map(p => p[3]); // columna Resultado
+      try {
+        const res = await fetch(API_URL);
+        const { partidos, pronosticos } = await res.json();
+        const resultados = partidos.slice(1).map(p => p[3]);
 
-      const tabla = document.getElementById("tablaResultados");
-      pronosticos.slice(1).forEach(fila => {
-        const nombre = fila[0];
-        const aciertos = fila.slice(1).reduce((acc, val, i) => {
-          return acc + (val === resultados[i] ? 1 : 0);
-        }, 0);
+        const tabla = document.getElementById("tablaResultados");
+        pronosticos.slice(1).forEach(fila => {
+          const nombre = fila[0];
+          const aciertos = fila.slice(1).reduce((acc, val, i) => {
+            return acc + (val === resultados[i] ? 1 : 0);
+          }, 0);
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
-        tabla.appendChild(tr);
-      });
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
+          tabla.appendChild(tr);
+        });
+      } catch (error) {
+        console.error("Error al cargar los resultados:", error);
+      }
     }
 
     cargarResultados();
