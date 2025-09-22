@@ -1,148 +1,98 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Resultados</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultados - Quiniela</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       font-family: 'Segoe UI', sans-serif;
       background-color: #f4f6f8;
       margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      align-items: flex-start;
-      text-align: center;
+      padding: 20px;
     }
-
     .container {
-      max-width: 400px;
-      width: 100%;
+      max-width: 800px;
+      margin: auto;
       background: #fff;
-      margin: 40px 20px;
       padding: 30px;
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
-
-    .header-box {
-      background-color: #0077cc;
-      color: white;
-      padding: 15px;
-      border-radius: 12px;
+    h1 {
+      text-align: center;
       margin-bottom: 20px;
+      color: #333;
     }
-
-    .header-box h1 {
-      margin: 0;
-      font-size: 20px;
-    }
-
     table {
       width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-      margin: 0 auto;
+      border-collapse: collapse;
+      margin-top: 20px;
     }
-
-    thead {
-      background-color: #0077cc;
-      color: white;
-    }
-
-    thead th {
-      padding: 12px;
-      font-size: 16px;
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
       text-align: center;
     }
-
-    tbody td {
-      padding: 12px;
-      font-size: 15px;
-      color: #333;
-      background-color: #eaf4fc;
-      border-bottom: 1px solid #cce0f5;
-      text-align: center;
+    th {
+      background: #0077cc;
+      color: #fff;
     }
-
-    tbody tr:last-child td {
-      border-bottom: none;
+    tr:nth-child(even) {
+      background: #f9f9f9;
     }
-
-    tbody tr:hover td {
-      background-color: #d4e9fb;
-    }
-
-    button {
-      margin-top: 25px;
-      width: 100%;
-      padding: 12px;
-      font-size: 16px;
-      background-color: #0077cc;
+    a {
+      display: inline-block;
+      margin-top: 20px;
+      text-decoration: none;
+      background: #0077cc;
       color: white;
-      border: none;
+      padding: 10px 15px;
       border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    button:hover {
-      background-color: #005fa3;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header-box">
-      <h1>Clasificación de Aciertos</h1>
-    </div>
-
-    <table>
+    <h1>Resultados</h1>
+    <table id="tablaResultados">
       <thead>
-        <tr><th>Jugador</th><th>Aciertos</th></tr>
+        <tr>
+          <th>#</th>
+          <th>Local</th>
+          <th>Visitante</th>
+          <th>Resultado</th>
+        </tr>
       </thead>
-      <tbody id="tablaResultados"></tbody>
+      <tbody></tbody>
     </table>
-
-    <button onclick="location.href='index.html'">Volver</button>
-    <button onclick="location.href='pronosticos.html'">Ir a pronósticos</button>
+    <a href="index.html">⬅ Volver</a>
   </div>
 
   <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
+    const API_URL = "/api";
 
-async function cargarResultados() {
-  try {
-    const res = await fetch(API_URL);
-    const { partidos, pronosticos } = await res.json();
+    async function cargarResultados() {
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        const partidos = data.partidos.slice(1); // quitamos cabecera
 
-    // Ajusta el índice si los resultados están en otra columna
-    const resultados = partidos.slice(1).map(p => String(p[3]));
-
-    const tabla = document.getElementById("tablaResultados");
-    pronosticos.slice(1).forEach(fila => {
-      const nombre = fila[0];
-      const aciertos = fila.slice(1).reduce((acc, val, i) => {
-        return acc + (String(val) === resultados[i] ? 1 : 0);
-      }, 0);
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
-      tabla.appendChild(tr);
-    });
-  } catch (error) {
-    console.error("Error al cargar los resultados:", error);
-  }
-}
+        const tbody = document.querySelector("#tablaResultados tbody");
+        partidos.forEach((p, i) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${i + 1}</td>
+            <td>${p[1]}</td>
+            <td>${p[2]}</td>
+            <td>${p[3] || "-"}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error("Error cargando resultados:", error);
+      }
+    }
 
     cargarResultados();
   </script>
