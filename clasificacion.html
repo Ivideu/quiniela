@@ -56,21 +56,34 @@
     tr:nth-child(even) {
       background-color: #f2f2f2;
     }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      color: #0077cc;
+      text-decoration: none;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Tabla de Clasificación</h1>
+    <h1>Clasificación de Aciertos</h1>
     <table>
       <thead>
         <tr>
           <th>Jugador</th>
-          <th>Puntos</th>
-          <th>PG</th>
+          <th>Aciertos</th>
         </tr>
       </thead>
       <tbody id="tablaClasificacion"></tbody>
     </table>
+
+    <a class="back-link" href="index.html">← Volver a inicio</a>
   </div>
 
   <script>
@@ -83,11 +96,11 @@
 
         const tabla = document.getElementById("tablaClasificacion");
 
-        // Ignoramos la primera fila (encabezados)
+        // Ignoramos encabezados y procesamos solo datos
         clasificacion.slice(1).forEach(fila => {
-          const [jugador, puntos, pg] = fila;
+          const [nombre, aciertos] = fila;
           const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${jugador}</td><td>${puntos}</td><td>${pg}</td>`;
+          tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
           tabla.appendChild(tr);
         });
       } catch (error) {
