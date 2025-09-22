@@ -3,11 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pronósticos</title>
+  <title>Pronósticos Registrados</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -22,7 +20,7 @@
     }
 
     .container {
-      max-width: 500px;
+      max-width: 600px;
       width: 100%;
       background: #fff;
       margin: 40px 20px;
@@ -40,58 +38,9 @@
       font-size: 22px;
     }
 
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-      color: #333;
-      text-align: left;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 16px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-top: 15px;
-    }
-
-    .grid input {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-
-    button {
-      margin-top: 25px;
-      width: 100%;
-      padding: 12px;
-      font-size: 16px;
-      background-color: #0077cc;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    button:hover {
-      background-color: #005fa3;
-    }
-
     table {
       width: 100%;
-      margin-top: 30px;
+      margin-top: 10px;
       border-collapse: separate;
       border-spacing: 0;
       border-radius: 12px;
@@ -122,49 +71,48 @@
       border-bottom: none;
     }
 
-    .message {
-      margin-top: 15px;
-      font-weight: bold;
-      color: green;
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background-color: #0077cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #005fa3;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Enviar Pronóstico</h1>
-    <form id="formPronostico">
-      <label for="nombre">Nombre:</label>
-      <input type="text" id="nombre" name="nombre" required />
-
-      <div class="grid">
-        <!-- Campos P1 a P14 -->
-        <script>
-          for (let i = 1; i <= 14; i++) {
-            document.write(`<input type="text" name="p${i}" placeholder="P${i}" required />`);
-          }
-        </script>
-      </div>
-
-      <button type="submit">Enviar</button>
-      <div class="message" id="mensaje"></div>
-    </form>
-
     <h1>Pronósticos Registrados</h1>
     <table>
       <thead>
         <tr>
           <th>Nombre</th>
-          <th colspan="14">Pronósticos</th>
+          <!-- Generar columnas P1 a P14 -->
+          <script>
+            for (let i = 1; i <= 14; i++) {
+              document.write(`<th>P${i}</th>`);
+            }
+          </script>
         </tr>
       </thead>
       <tbody id="tablaPronosticos"></tbody>
     </table>
+
+    <button onclick="location.href='index.html'">Volver</button>
   </div>
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
 
-    // Mostrar tabla de pronósticos
     async function cargarPronosticos() {
       const res = await fetch(API_URL);
       const { pronosticos } = await res.json();
@@ -179,35 +127,6 @@
     }
 
     cargarPronosticos();
-
-    // Enviar nuevo pronóstico
-    document.getElementById("formPronostico").addEventListener("submit", async e => {
-      e.preventDefault();
-      const form = e.target;
-      const data = {
-        nombre: form.nombre.value
-      };
-      for (let i = 1; i <= 14; i++) {
-        data["p" + i] = form["p" + i].value;
-      }
-
-      const res = await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
-
-      const result = await res.json();
-      if (result.resultado === "ok") {
-        document.getElementById("mensaje").textContent = "Pronóstico enviado correctamente.";
-        form.reset();
-        cargarPronosticos();
-      } else {
-        document.getElementById("mensaje").textContent = "Error al enviar el pronóstico.";
-      }
-    });
   </script>
 </body>
 </html>
