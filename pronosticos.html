@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pronósticos</title>
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -20,7 +22,7 @@
     }
 
     .container {
-      max-width: 600px;
+      max-width: 500px;
       width: 100%;
       background: #fff;
       margin: 40px 20px;
@@ -57,15 +59,9 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, 1fr);
       gap: 10px;
       margin-top: 15px;
-    }
-
-    .grid label {
-      font-weight: normal;
-      margin-bottom: 5px;
-      text-align: left;
     }
 
     .grid input {
@@ -140,8 +136,13 @@
       <label for="nombre">Nombre:</label>
       <input type="text" id="nombre" name="nombre" required />
 
-      <div class="grid" id="camposPronostico">
-        <!-- Aquí se insertarán los campos dinámicamente -->
+      <div class="grid">
+        <!-- Campos P1 a P14 -->
+        <script>
+          for (let i = 1; i <= 14; i++) {
+            document.write(`<input type="text" name="p${i}" placeholder="P${i}" required />`);
+          }
+        </script>
       </div>
 
       <button type="submit">Enviar</button>
@@ -163,30 +164,10 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
 
-    // Cargar partidos y generar campos
-    async function cargarPartidos() {
-      const res = await fetch(API_URL);
-      const { partidos, pronosticos } = await res.json();
-
-      const container = document.getElementById("camposPronostico");
-      container.innerHTML = "";
-
-      partidos.slice(1, 15).forEach((fila, i) => {
-        const label = document.createElement("label");
-        label.textContent = `P${i + 1}: ${fila[1]} vs ${fila[2]}`;
-        const input = document.createElement("input");
-        input.type = "text";
-        input.name = `p${i + 1}`;
-        input.required = true;
-        container.appendChild(label);
-        container.appendChild(input);
-      });
-
-      mostrarPronosticos(pronosticos);
-    }
-
     // Mostrar tabla de pronósticos
-    function mostrarPronosticos(pronosticos) {
+    async function cargarPronosticos() {
+      const res = await fetch(API_URL);
+      const { pronosticos } = await res.json();
       const tabla = document.getElementById("tablaPronosticos");
       tabla.innerHTML = "";
 
@@ -197,7 +178,7 @@
       });
     }
 
-    cargarPartidos();
+    cargarPronosticos();
 
     // Enviar nuevo pronóstico
     document.getElementById("formPronostico").addEventListener("submit", async e => {
@@ -222,7 +203,7 @@
       if (result.resultado === "ok") {
         document.getElementById("mensaje").textContent = "Pronóstico enviado correctamente.";
         form.reset();
-        cargarPartidos();
+        cargarPronosticos();
       } else {
         document.getElementById("mensaje").textContent = "Error al enviar el pronóstico.";
       }
