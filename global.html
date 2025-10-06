@@ -97,7 +97,7 @@
         const tabla = document.getElementById("tablaGlobal");
 
         // Ignoramos encabezados y procesamos solo datos
-        clasificacion.slice(1).forEach(fila => {
+        Global.slice(1).forEach(fila => {
           const [nombre, aciertos] = fila;
           const tr = document.createElement("tr");
           tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
