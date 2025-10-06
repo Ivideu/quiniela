@@ -1,1 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clasificación</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      align-items: flex-start;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: #fff;
+      margin: 40px 20px;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 12px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background-color: #0077cc;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      color: #0077cc;
+      text-decoration: none;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Clasificación Global</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Jugador</th>
+          <th>Ganados</th>
+        </tr>
+      </thead>
+      <tbody id="tablaGlobal"></tbody>
+    </table>
+
+    <a class="back-link" href="index.html">← Volver a inicio</a>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
+
+    async function cargarClasificacion() {
+      try {
+        const res = await fetch(API_URL);
+        const { Global } = await res.json();
+
+        const tabla = document.getElementById("tablaGlobal");
+
+        // Ignoramos encabezados y procesamos solo datos
+        clasificacion.slice(1).forEach(fila => {
+          const [nombre, aciertos] = fila;
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
+          tabla.appendChild(tr);
+        });
+      } catch (error) {
+        console.error("Error cargando la clasificación:", error);
+      }
+    }
+
+    cargarClasificacion();
+  </script>
+</body>
+</html>
