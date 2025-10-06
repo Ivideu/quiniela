@@ -89,15 +89,15 @@
 <script>
   const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
 
-  async function cargarClasificacion() {
+  async function cargarGlobal() {
     try {
       const res = await fetch(API_URL);
       const data = await res.json();
 
       const tabla = document.getElementById("tablaGlobal");
-      const clasificacion = data.Global;
+      const Global = data.Global;
 
-      clasificacion.slice(1).forEach(fila => {
+      Global.slice(1).forEach(fila => {
         const [nombre, aciertos] = fila;
         const tr = document.createElement("tr");
         tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
@@ -108,7 +108,7 @@
     }
   }
 
-  cargarClasificacion();
+  cargarGlobal();
 </script>
 
 </body>
