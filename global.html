@@ -86,29 +86,30 @@
     <a class="back-link" href="index.html">← Volver a inicio</a>
   </div>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
+<script>
+  const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
 
-    async function cargarGlobal() {
-      try {
-        const res = await fetch(API_URL);
-        const { Global } = await res.json();
+  async function cargarClasificacion() {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
 
-        const tabla = document.getElementById("tablaGlobal");
+      const tabla = document.getElementById("tablaGlobal");
+      const clasificacion = data.Global;
 
-        // Ignoramos encabezados y procesamos solo datos
-        Global.slice(1).forEach(fila => {
-          const [nombre, aciertos] = fila;
-          const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
-          tabla.appendChild(tr);
-        });
-      } catch (error) {
-        console.error("Error cargando la clasificación:", error);
-      }
+      clasificacion.slice(1).forEach(fila => {
+        const [nombre, aciertos] = fila;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
+        tabla.appendChild(tr);
+      });
+    } catch (error) {
+      console.error("Error cargando la clasificación:", error);
     }
+  }
 
-    cargarGlobal();
-  </script>
+  cargarClasificacion();
+</script>
+
 </body>
 </html>
