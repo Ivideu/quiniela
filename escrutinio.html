@@ -5,70 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Escrutinio</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6f8;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      align-items: flex-start;
-    }
-
-    .container {
-      max-width: 600px;
-      width: 100%;
-      background: #fff;
-      margin: 40px 20px;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #333;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-
-    th, td {
-      padding: 12px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-
-    th {
-      background-color: #28a745;
-      color: white;
-    }
-
-    tr:nth-child(even) {
-      background-color: #f2f2f2;
-    }
-
-    .back-link {
-      display: block;
-      text-align: center;
-      margin-top: 20px;
-      color: #28a745;
-      text-decoration: none;
-    }
-
-    .back-link:hover {
-      text-decoration: underline;
-    }
-  </style>
+        * { 
+            box-sizing: border-box; 
+        }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: #f4f6f8; 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            justify-content: center; 
+            min-height: 100vh; 
+            align-items: flex-start; 
+        }
+        .container { 
+            max-width: 600px; 
+            width: 100%; 
+            background: #fff; 
+            margin: 40px 20px; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.05); 
+        }
+        h1 { 
+            text-align: center; 
+            margin-bottom: 20px; 
+            color: #333; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+        }
+        th, td { 
+            padding: 12px; 
+            border: 1px solid #ccc; 
+            text-align: left; 
+        }
+        th { 
+            background-color: #0077cc; 
+            color: white; 
+        }
+        tr:nth-child(even) { 
+            background-color: #f2f2f2; 
+        }
+        .back-link { 
+            display: block; 
+            text-align: center; 
+            margin-top: 20px; 
+            color: #0077cc; 
+            text-decoration: none; 
+        }
+        .back-link:hover { 
+            text-decoration: underline; 
+        }
+    </style>
 </head>
 <body>
   <div class="container">
@@ -100,7 +91,13 @@
         escrutinio.slice(1).forEach(fila => {
           const [aciertos, premio] = fila;
           const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${aciertos}</td><td>€ ${parseFloat(premio).toFixed(2)}</td>`;
+          const premioFormateado = parseFloat(premio).toLocaleString('es-ES', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+});
+
+tr.innerHTML = `<td>${aciertos}</td><td>${premioFormateado} €</td>`;
+
           tabla.appendChild(tr);
         });
       } catch (error) {
