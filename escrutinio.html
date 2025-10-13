@@ -78,6 +78,7 @@
       <thead>
         <tr>
           <th>Aciertos</th>
+          <th>Acertantes</th>
           <th>Premio (€)</th>
         </tr>
       </thead>
@@ -99,7 +100,7 @@
 
         // Ignoramos encabezados y procesamos solo datos
         escrutinio.slice(1).forEach(fila => {
-          const [aciertos, premio] = fila;
+          const [aciertos, acertantes, premio] = fila;
           const tr = document.createElement("tr");
           const premioFormateado = parseFloat(premio).toLocaleString('es-ES', {
   minimumFractionDigits: 2,
