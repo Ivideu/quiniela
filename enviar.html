@@ -1,71 +1,47 @@
 <!DOCTYPE html>
 <html lang="es">
-<head><!DOCTYPE html>
-<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tu Quiniela</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', sans-serif;
       background-color: #f4f6f8;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      align-items: flex-start;
+      margin: 0; padding: 0;
+      display: flex; justify-content: center;
+      min-height: 100vh; align-items: flex-start;
     }
     .container {
-      max-width: 600px;
-      width: 100%;
-      background: #fff;
-      margin: 40px 20px;
-      padding: 30px;
-      border-radius: 12px;
+      max-width: 600px; width: 100%;
+      background: #fff; margin: 40px 20px;
+      padding: 30px; border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #333;
-    }
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-      color: #555;
-    }
-    input[type="text"],
-    select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 16px;
+    h1 { text-align: center; margin-bottom: 20px; color: #333; }
+    label { display: block; margin-top: 15px; font-weight: bold; color: #555; }
+    input[type="text"], select {
+      width: 100%; padding: 10px; margin-top: 5px;
+      border: 1px solid #ccc; border-radius: 6px; font-size: 16px;
     }
     button {
-      margin-top: 25px;
-      width: 100%;
-      padding: 12px;
-      font-size: 16px;
-      background-color: #0077cc;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.2s;
+      margin-top: 25px; width: 100%; padding: 12px;
+      font-size: 16px; background-color: #0077cc;
+      color: white; border: none; border-radius: 6px;
+      cursor: pointer; transition: background-color 0.2s;
     }
-    button:hover {
-      background-color: #005fa3;
-    }
-    .match {
-      margin-top: 10px;
+    button:hover { background-color: #005fa3; }
+    .match { margin-top: 10px; }
+    
+    /* Estilo especial para el Pleno al 15 */
+    #extra-match {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #e3f2fd;
+      border: 2px solid #2196f3;
+      border-radius: 8px;
+      display: none; /* Oculto por defecto */
     }
   </style>
 </head>
@@ -79,6 +55,18 @@
       </select>
 
       <div id="partidos"></div>
+      
+      <!-- Contenedor dinámico para el Pleno al 15 -->
+      <div id="extra-match">
+        <label for="p15">🔥 ¡Te toca el Pleno al 15! (Goles Local-Visitante):</label>
+        <select name="p15" id="p15">
+          <option value="">Elige resultado</option>
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="M">M</option>
+        </select>
+      </div>
 
       <button type="submit">Enviar Pronóstico</button>
       <button type="button" onclick="location.href='index.html'">Inicio</button>
@@ -86,14 +74,15 @@
   </div>
 
   <script>
-    // 👇 Ahora usamos la ruta relativa /api
     const API_URL = "/api";
+    let USUARIO_ESPECIAL = ""; // Se recibirá desde el Apps Script (doGet)
 
+    // Cargar los 14 partidos normales
     async function cargarPartidos() {
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-        const partidos = data.partidos.slice(1); // quitar cabecera
+        const partidos = data.partidos.slice(1);
         const partidosDiv = document.getElementById("partidos");
 
         partidos.forEach((p, index) => {
@@ -116,38 +105,60 @@
         });
       } catch (error) {
         alert("Error cargando partidos");
-        console.error(error);
       }
     }
 
-async function cargarNombres() {
+    // Cargar nombres y detectar quién es el "Elegido"
+    async function cargarNombres() {
       try {
         const res = await fetch(API_URL);
-        const { pronosticos } = await res.json();
-        const nombresUnicos = [...new Set(pronosticos.slice(1).map(fila => fila[0]))];
-
+        const data = await res.json();
+        
+        // Guardamos el usuario que el script decidió que es el especial esta semana
+        USUARIO_ESPECIAL = data.usuarioEspecial; 
+        
+        const nombresUnicos = [...new Set(data.pronosticos.slice(1).map(fila => fila[0]))];
         const select = document.getElementById("nombre");
         select.innerHTML = '<option value="">Selecciona tu nombre</option>';
 
         nombresUnicos.forEach(nombre => {
           const option = document.createElement("option");
           option.value = nombre;
-          option.textContent = nombre;
+          // Si es el especial, le ponemos una marca visual en el desplegable
+          option.textContent = (nombre === USUARIO_ESPECIAL) ? nombre + " ⭐" : nombre;
           select.appendChild(option);
         });
       } catch (error) {
         console.error("Error al cargar nombres:", error);
-        const select = document.getElementById("nombre");
-        select.innerHTML = '<option value="">Error al cargar nombres</option>';
       }
     }
 
+    // Escuchar cuando el usuario selecciona su nombre para mostrar/ocultar el Pleno 15
+    document.getElementById("nombre").addEventListener("change", function() {
+      const extraDiv = document.getElementById("extra-match");
+      const p15Select = document.getElementById("p15");
+
+      if (this.value === USUARIO_ESPECIAL && USUARIO_ESPECIAL !== "") {
+        extraDiv.style.display = "block";
+        p15Select.required = true;
+      } else {
+        extraDiv.style.display = "none";
+        p15Select.required = false;
+        p15Select.value = ""; // Limpiar si cambia a otro usuario
+      }
+    });
+
+    // Enviar el formulario
     document.getElementById("quinielaForm").addEventListener("submit", async function(e) {
       e.preventDefault();
 
       const formData = new FormData(e.target);
-      const data = { nombre: formData.get("nombre") };
+      const data = { 
+        nombre: formData.get("nombre"),
+        p15: formData.get("p15") || "" // Enviamos p15 (vacío si no existe)
+      };
 
+      // Recoger los 14 partidos
       for (let i = 1; i <= 14; i++) {
         data["p" + i] = formData.get("p" + i);
       }
@@ -164,18 +175,18 @@ async function cargarNombres() {
         if (result.resultado === "ok") {
           alert("✅ Pronóstico enviado correctamente.");
           e.target.reset();
+          document.getElementById("extra-match").style.display = "none";
         } else {
-          alert("⚠️ Comprueba que se ha enviado el pronóstico en el botón de Apuestas hechas");
+          alert("⚠️ Error: " + result.detalle);
         }
       } catch (error) {
-        alert("❌ Comprueba que se ha enviado el pronóstico en el botón de Apuestas hechas");
-        console.error(error);
+        alert("❌ Error de conexión al enviar.");
       }
     });
 
+    // Iniciar carga
     cargarPartidos();
     cargarNombres();
   </script>
 </body>
 </html>
-  

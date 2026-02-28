@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tu Quiniela</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      align-items: flex-start;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: #fff;
+      margin: 40px 20px;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+      color: #555;
+    }
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background-color: #0077cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #005fa3;
+    }
+    .match {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tu Quiniela</h1>
+    <form id="quinielaForm">
+      <label for="nombre">Selecciona tu nombre:</label>
+      <select id="nombre" name="nombre" required>
+        <option value="">Cargando nombres...</option>
+      </select>
+
+      <div id="partidos"></div>
+
+      <button type="submit">Enviar Pronóstico</button>
+      <button type="button" onclick="location.href='index.html'">Inicio</button>
+     </form>
+  </div>
+
+  <script>
+    // 👇 Ahora usamos la ruta relativa /api
+    const API_URL = "/api";
+
+    async function cargarPartidos() {
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        const partidos = data.partidos.slice(1); // quitar cabecera
+        const partidosDiv = document.getElementById("partidos");
+
+        partidos.forEach((p, index) => {
+          const id = index + 1;
+          const local = p[1];
+          const visitante = p[2];
+
+          const div = document.createElement("div");
+          div.className = "match";
+          div.innerHTML = `
+            <label for="p${id}">Partido ${id}: ${local} vs ${visitante}</label>
+            <select name="p${id}" id="p${id}" required>
+              <option value="">Elige</option>
+              <option value="1">1</option>
+              <option value="X">X</option>
+              <option value="2">2</option>
+            </select>
+          `;
+          partidosDiv.appendChild(div);
+        });
+      } catch (error) {
+        alert("Error cargando partidos");
+        console.error(error);
+      }
+    }
+
+async function cargarNombres() {
+      try {
+        const res = await fetch(API_URL);
+        const { pronosticos } = await res.json();
+        const nombresUnicos = [...new Set(pronosticos.slice(1).map(fila => fila[0]))];
+
+        const select = document.getElementById("nombre");
+        select.innerHTML = '<option value="">Selecciona tu nombre</option>';
+
+        nombresUnicos.forEach(nombre => {
+          const option = document.createElement("option");
+          option.value = nombre;
+          option.textContent = nombre;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error("Error al cargar nombres:", error);
+        const select = document.getElementById("nombre");
+        select.innerHTML = '<option value="">Error al cargar nombres</option>';
+      }
+    }
+
+    document.getElementById("quinielaForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+      const data = { nombre: formData.get("nombre") };
+
+      for (let i = 1; i <= 14; i++) {
+        data["p" + i] = formData.get("p" + i);
+      }
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (result.resultado === "ok") {
+          alert("✅ Pronóstico enviado correctamente.");
+          e.target.reset();
+        } else {
+          alert("⚠️ Comprueba que se ha enviado el pronóstico en el botón de Apuestas hechas");
+        }
+      } catch (error) {
+        alert("❌ Comprueba que se ha enviado el pronóstico en el botón de Apuestas hechas");
+        console.error(error);
+      }
+    });
+
+    cargarPartidos();
+    cargarNombres();
+  </script>
+</body>
+</html>
+  
