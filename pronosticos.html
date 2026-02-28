@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pronósticos de la jornada</title>
+  <title>Pronósticos de la Jornada</title>
   <style>
     body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
     .container { max-width: 1200px; margin: auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -11,18 +11,20 @@
     .table-responsive { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; border: 1px solid #0077cc; }
     th, td { border: 1px solid #dee2e6; padding: 12px 6px; text-align: center; font-size: 13px; }
-    th { background-color: #0077cc; color: white; text-transform: uppercase; font-weight: bold; }
     
-    /* Columna P15 resaltada 
-    .p15-col { 
-      background-color: #f0f7ff !important; 
-      font-weight: bold; 
-      border-left: 2px solid #0077cc;
-      min-width: 110px;
-    }
-    th.p15-col { color: #f0f7ff; } /* Texto invisible para cabecera P15 como en tu imagen */
+    /* Cabecera Azul */
+    th { background-color: #0077cc; color: white; text-transform: uppercase; font-weight: bold; }
 
-    tr:nth-child(even) { background-color: #fcfcfc; }
+    /* --- EFECTO CEBRA (FILAS ALTERNAS) --- */
+    /* Filas impares: Blanco */
+    tr:nth-child(odd) { background-color: #ffffff; }
+    
+    /* Filas pares: Azul muy claro para diferenciar */
+    tr:nth-child(even) { background-color: #f0f7ff; }
+
+    /* Efecto al pasar el ratón para resaltar la fila */
+    tr:hover { background-color: #e2eeff !important; transition: 0.2s; }
+
     .btn-volver { display: inline-block; margin-top: 25px; background: #0077cc; color: white !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; }
   </style>
 </head>
@@ -35,7 +37,7 @@
         <tbody></tbody>
       </table>
     </div>
-    <a href="index.html" class="btn-volver">⬅ Volver</a>
+    <a href="index.html" class="btn-volver">⬅ Volver al Inicio</a>
   </div>
 
   <script>
@@ -46,30 +48,34 @@
         const res = await fetch(API_URL);
         const data = await res.json();
         const filas = data.pronosticos;
+        if (!filas) return;
 
-        // Cabecera
+        // 1. Dibujar Cabecera
         const header = document.getElementById("headerRow");
-        header.innerHTML = filas[0].map((h, i) => 
-          `<th class="${i === 15 ? 'p15-col' : ''}">${h}</th>`
-        ).join("");
+        header.innerHTML = filas[0].map(h => `<th>${h}</th>`).join("");
 
-        // Cuerpo
+        // 2. Dibujar Cuerpo
         const tbody = document.querySelector("#tablaPronosticos tbody");
         tbody.innerHTML = "";
+        
         filas.slice(1).forEach(row => {
           const tr = document.createElement("tr");
           let htmlCeldas = "";
-          // Forzamos 16 columnas
+          
+          // Recorremos las 16 columnas (Nombre + 15 partidos)
           for(let i=0; i<16; i++) {
             let val = row[i] || "";
-            // Si el valor contiene la letra T y Z (fecha ISO), lo limpiamos por seguridad
-            if (val.toString().includes("T") && val.toString().includes("Z")) val = "—";
-            htmlCeldas += `<td class="${i === 15 ? 'p15-col' : ''}">${val}</td>`;
+            // Limpieza de fechas ISO por si acaso
+            if (val.toString().includes("T") && val.toString().includes("Z")) val = "";
+            htmlCeldas += `<td>${val}</td>`;
           }
+          
           tr.innerHTML = htmlCeldas;
           tbody.appendChild(tr);
         });
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+        console.error("Error al cargar la tabla:", e); 
+      }
     }
     cargar();
   </script>
