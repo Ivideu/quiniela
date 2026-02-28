@@ -5,31 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clasificación - Quiniela</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
-    .container { max-width: 600px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; align-items: flex-start; }
+    .container { max-width: 600px; width: 100%; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     h1 { text-align: center; margin-bottom: 25px; color: #333; }
-    table { width: 100%; border-collapse: collapse; border: 2px solid #0077cc; }
+    table { width: 100%; border-collapse: collapse; border: 2px solid #0077cc; margin-top: 10px; }
     th, td { padding: 12px; border: 1px solid #dee2e6; text-align: center; }
     th { background-color: #0077cc; color: white; text-transform: uppercase; font-weight: bold; }
 
-    /* --- ESTILO CEBRA RESALTADO --- */
+    /* ESTILO CEBRA CON AZUL RESALTADO #b1d4fd */
     tr:nth-child(odd) { background-color: #ffffff; }
-    tr:nth-child(even) { background-color: #b1d4fd; } /* Azul resaltado pedido */
+    tr:nth-child(even) { background-color: #b1d4fd; } 
     tr:hover { background-color: #8dbdf0 !important; transition: 0.1s; }
 
-    /* Estilos para celdas */
-    td:first-child { font-weight: bold; text-align: left; }
+    td:first-child { font-weight: bold; text-align: left; padding-left: 20px; }
     td:last-child { font-weight: bold; color: #0077cc; font-size: 1.1em; }
 
-    .btn-volver {
-      display: block; margin-top: 25px; text-decoration: none; background: #0077cc; 
-      color: white !important; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold;
-    }
+    .btn-volver { display: block; margin-top: 25px; text-decoration: none; background: #0077cc; color: white !important; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; }
+    .btn-volver:hover { background: #005fa3; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Clasificación de Aciertos</h1>
+    <h1>Clasificación de aciertos</h1>
     <table>
       <thead>
         <tr>
@@ -38,14 +35,14 @@
         </tr>
       </thead>
       <tbody id="tablaClasificacion">
-        <tr><td colspan="2">Cargando datos...</td></tr>
+        <tr><td colspan="2">Cargando clasificación en tiempo real...</td></tr>
       </tbody>
     </table>
     <a class="btn-volver" href="index.html">⬅ Volver a inicio</a>
   </div>
 
   <script>
-    // IMPORTANTE: Usa la ruta relativa /api si estás en el mismo servidor
+    // IMPORTANTE: Asegúrate de que esta URL sea la de tu Web App de Apps Script
     const API_URL = "/api"; 
 
     async function cargarClasificacion() {
@@ -53,31 +50,30 @@
         const res = await fetch(API_URL);
         const data = await res.json();
         
-        // CORRECCIÓN: Buscamos 'clasificacion' en minúsculas (según tu Apps Script)
-        const clasificacion = data.clasificacion;
-
+        // Leemos la clave 'clasificacion' del JSON
+        const lista = data.clasificacion;
         const tbody = document.getElementById("tablaClasificacion");
         tbody.innerHTML = ""; 
 
-        if (!clasificacion || clasificacion.length <= 1) {
+        if (!lista || lista.length <= 1) {
           tbody.innerHTML = "<tr><td colspan='2'>No hay datos disponibles en el Excel</td></tr>";
           return;
         }
 
-        // Saltamos la fila 0 (Nombre, Aciertos) y recorremos los jugadores
-        clasificacion.slice(1).forEach(fila => {
-          const nombre = fila[0] || "";
-          const aciertos = fila[1] !== undefined ? fila[1] : 0;
+        // Saltamos fila 0 (Nombre/Aciertos) y recorremos los jugadores
+        lista.slice(1).forEach(fila => {
+          const nombre = fila[0];
+          const aciertos = fila[1];
           
-          if (nombre.trim() !== "") {
+          if (nombre && nombre.toString().trim() !== "") {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
+            tr.innerHTML = `<td>${nombre}</td><td>${aciertos || 0}</td>`;
             tbody.appendChild(tr);
           }
         });
       } catch (error) {
-        console.error("Error cargando clasificación:", error);
-        document.getElementById("tablaClasificacion").innerHTML = "<tr><td colspan='2'>Error de conexión con la API</td></tr>";
+        console.error("Error:", error);
+        document.getElementById("tablaClasificacion").innerHTML = "<tr><td colspan='2'>Error de conexión. Revisa la consola.</td></tr>";
       }
     }
     cargarClasificacion();
