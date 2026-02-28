@@ -6,42 +6,19 @@
   <title>Tu Quiniela</title>
   <style>
     * { box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6f8;
-      margin: 0; padding: 0;
-      display: flex; justify-content: center;
-      min-height: 100vh; align-items: flex-start;
-    }
-    .container {
-      max-width: 600px; width: 100%;
-      background: #fff; margin: 40px 20px;
-      padding: 30px; border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 0; display: flex; justify-content: center; min-height: 100vh; align-items: flex-start; }
+    .container { max-width: 600px; width: 100%; background: #fff; margin: 40px 20px; padding: 30px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
     h1 { text-align: center; margin-bottom: 20px; color: #333; }
     label { display: block; margin-top: 15px; font-weight: bold; color: #555; }
-    input[type="text"], select {
-      width: 100%; padding: 10px; margin-top: 5px;
-      border: 1px solid #ccc; border-radius: 6px; font-size: 16px;
-    }
-    button {
-      margin-top: 25px; width: 100%; padding: 12px;
-      font-size: 16px; background-color: #0077cc;
-      color: white; border: none; border-radius: 6px;
-      cursor: pointer; transition: background-color 0.2s;
-    }
-    button:hover { background-color: #005fa3; }
-    .match { margin-top: 10px; }
+    select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+    button { margin-top: 25px; width: 100%; padding: 12px; font-size: 16px; background-color: #0077cc; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    .match { margin-top: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
     
-    /* Estilo especial para el Pleno al 15 */
+    /* EL PLENO AL 15 EMPIEZA OCULTO */
     #extra-match {
-      margin-top: 20px;
-      padding: 15px;
-      background-color: #e3f2fd;
-      border: 2px solid #2196f3;
-      border-radius: 8px;
-      display: none; /* Oculto por defecto */
+      display: none; 
+      margin-top: 20px; padding: 15px;
+      background-color: #fff3cd; border: 2px solid #ffecb5; border-radius: 8px;
     }
   </style>
 </head>
@@ -56,15 +33,16 @@
 
       <div id="partidos"></div>
       
-      <!-- Contenedor dinámico para el Pleno al 15 -->
+      <!-- Bloque dinámico para el ID 15 (Betis - Sevilla) -->
       <div id="extra-match">
-        <label for="p15">🔥 ¡Te toca el Pleno al 15! (Goles Local-Visitante):</label>
+        <label id="labelP15" for="p15"><strong>PARTIDO 15:</strong></label>
         <select name="p15" id="p15">
-          <option value="">Elige resultado</option>
-          <option value="0">0</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="M">M</option>
+          <option value="">Elige Goles (0, 1, 2, M)</option>
+          <option value="1-0">1-0</option>
+          <option value="0-1">0-1</option>
+          <option value="1-1">1-1</option>
+          <option value="M-M">M-M</option>
+          <!-- Puedes poner aquí las opciones que prefieras para el pleno -->
         </select>
       </div>
 
@@ -75,93 +53,71 @@
 
   <script>
     const API_URL = "/api";
-    let USUARIO_ESPECIAL = ""; // Se recibirá desde el Apps Script (doGet)
+    let USUARIO_ESPECIAL = "";
 
-    // Cargar los 14 partidos normales
-    async function cargarPartidos() {
+    async function inicializarApp() {
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-        const partidos = data.partidos.slice(1);
+        
+        USUARIO_ESPECIAL = data.usuarioEspecial;
+
+        // 1. Cargar Partidos (Solo del 1 al 14)
         const partidosDiv = document.getElementById("partidos");
-
-        partidos.forEach((p, index) => {
-          const id = index + 1;
-          const local = p[1];
-          const visitante = p[2];
-
+        const listaPartidos = data.partidos.slice(1, 15); // Toma de la fila 2 a la 15 (IDs 1-14)
+        
+        listaPartidos.forEach((p, index) => {
           const div = document.createElement("div");
           div.className = "match";
-          div.innerHTML = `
-            <label for="p${id}">Partido ${id}: ${local} vs ${visitante}</label>
-            <select name="p${id}" id="p${id}" required>
-              <option value="">Elige</option>
-              <option value="1">1</option>
-              <option value="X">X</option>
-              <option value="2">2</option>
-            </select>
-          `;
+          div.innerHTML = `<label>Partido ${index+1}: ${p[1]} vs ${p[2]}</label>
+            <select name="p${index+1}" required>
+              <option value="">Elige</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>
+            </select>`;
           partidosDiv.appendChild(div);
         });
-      } catch (error) {
-        alert("Error cargando partidos");
-      }
-    }
 
-    // Cargar nombres y detectar quién es el "Elegido"
-    async function cargarNombres() {
-      try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-        
-        // Guardamos el usuario que el script decidió que es el especial esta semana
-        USUARIO_ESPECIAL = data.usuarioEspecial; 
-        
-        const nombresUnicos = [...new Set(data.pronosticos.slice(1).map(fila => fila[0]))];
-        const select = document.getElementById("nombre");
-        select.innerHTML = '<option value="">Selecciona tu nombre</option>';
+        // 2. Configurar Partido 15 (Fila 16 del Excel)
+        if (data.datosPartido15) {
+          document.getElementById("labelP15").innerHTML = `<strong>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</strong>`;
+        }
 
-        nombresUnicos.forEach(nombre => {
-          const option = document.createElement("option");
-          option.value = nombre;
-          // Si es el especial, le ponemos una marca visual en el desplegable
-          option.textContent = (nombre === USUARIO_ESPECIAL) ? nombre + " ⭐" : nombre;
-          select.appendChild(option);
+        // 3. Cargar Nombres
+        const selectNombres = document.getElementById("nombre");
+        selectNombres.innerHTML = '<option value="">Selecciona tu nombre</option>';
+        const nombresUnicos = [...new Set(data.pronosticos.slice(1).map(f => f[0]))].filter(n => n);
+        
+        nombresUnicos.forEach(n => {
+          const opt = document.createElement("option");
+          opt.value = n;
+          opt.textContent = (n === USUARIO_ESPECIAL) ? n + " ⭐ (Te toca el 15)" : n;
+          selectNombres.appendChild(opt);
         });
-      } catch (error) {
-        console.error("Error al cargar nombres:", error);
-      }
+
+      } catch (e) { alert("Error al cargar datos"); }
     }
 
-    // Escuchar cuando el usuario selecciona su nombre para mostrar/ocultar el Pleno 15
+    // Lógica para mostrar/ocultar el Pleno 15 según el nombre
     document.getElementById("nombre").addEventListener("change", function() {
       const extraDiv = document.getElementById("extra-match");
       const p15Select = document.getElementById("p15");
-
-      if (this.value === USUARIO_ESPECIAL && USUARIO_ESPECIAL !== "") {
+      
+      if (this.value !== "" && this.value === USUARIO_ESPECIAL) {
         extraDiv.style.display = "block";
         p15Select.required = true;
       } else {
         extraDiv.style.display = "none";
         p15Select.required = false;
-        p15Select.value = ""; // Limpiar si cambia a otro usuario
+        p15Select.value = "";
       }
     });
 
-    // Enviar el formulario
     document.getElementById("quinielaForm").addEventListener("submit", async function(e) {
       e.preventDefault();
-
       const formData = new FormData(e.target);
-      const data = { 
-        nombre: formData.get("nombre"),
-        p15: formData.get("p15") || "" // Enviamos p15 (vacío si no existe)
-      };
+      const data = { nombre: formData.get("nombre") };
 
-      // Recoger los 14 partidos
-      for (let i = 1; i <= 14; i++) {
-        data["p" + i] = formData.get("p" + i);
-      }
+      for (let i = 1; i <= 14; i++) { data["p" + i] = formData.get("p" + i); }
+      data["p15"] = formData.get("p15") || ""; // Se envía a la columna P del excel
 
       try {
         const res = await fetch(API_URL, {
@@ -169,24 +125,15 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data)
         });
-
         const result = await res.json();
-
         if (result.resultado === "ok") {
-          alert("✅ Pronóstico enviado correctamente.");
-          e.target.reset();
-          document.getElementById("extra-match").style.display = "none";
-        } else {
-          alert("⚠️ Error: " + result.detalle);
+          alert("✅ Enviado.");
+          location.reload();
         }
-      } catch (error) {
-        alert("❌ Error de conexión al enviar.");
-      }
+      } catch (error) { alert("Error al enviar"); }
     });
 
-    // Iniciar carga
-    cargarPartidos();
-    cargarNombres();
+    inicializarApp();
   </script>
 </body>
 </html>
