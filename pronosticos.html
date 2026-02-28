@@ -12,62 +12,100 @@
       padding: 20px;
     }
     .container {
-      max-width: 1000px;
+      max-width: 1100px;
       margin: auto;
       background: #fff;
       padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
     h1 {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
       color: #333;
+      font-size: 28px;
+    }
+    .table-responsive {
+      overflow-x: auto;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      margin-top: 10px;
       font-size: 14px;
+      background: white;
     }
     th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
+      border: 1px solid #dee2e6;
+      padding: 12px 8px;
       text-align: center;
     }
     th {
       background: #0077cc;
       color: #fff;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    /* Estilo especial para la columna P15 */
+    th:last-child, td:last-child {
+      background-color: #eef7ff;
+      font-weight: bold;
+      min-width: 80px;
     }
     tr:nth-child(even) {
-      background: #f9f9f9;
+      background: #f8f9fa;
     }
-        a {
+    tr:hover {
+      background-color: #f1f4f7;
+    }
+    .btn-volver {
       display: inline-block;
-      margin-top: 20px;
+      margin-top: 25px;
       text-decoration: none;
       background: #0077cc;
       color: white !important;
-      padding: 10px 15px;
+      padding: 12px 24px;
       border-radius: 6px;
-      text-align: center;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .btn-volver:hover {
+      background: #005fa3;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Pronósticos</h1>
-    <table id="tablaPronosticos">
-      <thead>
-        <tr id="headerRow"></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <a href="index.html">⬅ Volver</a>
+    <h1>Pronósticos de la Jornada</h1>
+    <div class="table-responsive">
+      <table id="tablaPronosticos">
+        <thead>
+          <tr id="headerRow"></tr>
+        </thead>
+        <tbody>
+          <!-- Los datos se cargarán aquí -->
+        </tbody>
+      </table>
+    </div>
+    <a href="index.html" class="btn-volver">⬅ Volver al Inicio</a>
   </div>
 
   <script>
     const API_URL = "/api";
+
+    // Función para limpiar fechas extrañas que mete Google Sheets en el P15
+    function formatearResultado(valor) {
+      if (!valor) return "";
+      
+      // Si Google Sheets envió una fecha ISO (como la de tu imagen)
+      if (typeof valor === "string" && valor.includes("T") && valor.includes("Z")) {
+        // Intentamos extraer la hora/minutos si era un marcador tipo 1-2 o similar
+        // Pero lo más seguro para quinielas es limpiar cualquier objeto Date
+        return "Pendiente"; 
+      }
+      return valor;
+    }
 
     async function cargarPronosticos() {
       try {
@@ -75,13 +113,29 @@
         const data = await res.json();
         const pronosticos = data.pronosticos;
 
+        if (!pronosticos || pronosticos.length === 0) return;
+
+        // 1. Crear Cabecera
         const header = document.getElementById("headerRow");
         header.innerHTML = pronosticos[0].map(col => `<th>${col}</th>`).join("");
 
+        // 2. Llenar Cuerpo de la Tabla
         const tbody = document.querySelector("#tablaPronosticos tbody");
+        tbody.innerHTML = ""; // Limpiar antes de cargar
+
         pronosticos.slice(1).forEach(row => {
           const tr = document.createElement("tr");
-          tr.innerHTML = row.map(col => `<td>${col}</td>`).join("");
+          
+          const celdas = row.map((col, index) => {
+            // Si es la última columna (P15), aplicamos limpieza
+            if (index === row.length - 1) {
+              const valorLimpio = formatearResultado(col);
+              return `<td>${valorLimpio}</td>`;
+            }
+            return `<td>${col || ""}</td>`;
+          }).join("");
+
+          tr.innerHTML = celdas;
           tbody.appendChild(tr);
         });
       } catch (error) {
