@@ -11,7 +11,8 @@
     h1 { text-align: center; margin-bottom: 20px; color: #333; }
     label { display: block; margin-top: 15px; font-weight: bold; color: #555; }
     select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-    button { margin-top: 25px; width: 100%; padding: 12px; font-size: 16px; background-color: #0077cc; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    button { margin-top: 25px; width: 100%; padding: 12px; font-size: 16px; background-color: #0077cc; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
+    button:hover { background-color: #005fa3; }
     .match { margin-top: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
     #extra-match { display: none; margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 2px solid #ffecb5; border-radius: 8px; }
   </style>
@@ -24,13 +25,16 @@
       <select id="nombre" name="nombre" required>
         <option value="">Cargando nombres...</option>
       </select>
+
       <div id="partidos"></div>
+      
       <div id="extra-match">
-        <label id="labelP15" for="p15"><strong>🔥 PLENO AL 15</strong></label>
+        <label id="labelP15" for="p15"><strong>CARGANDO PLENO...</strong></label>
         <select name="p15" id="p15">
-          <!-- Opciones cargadas por JS -->
+          <option value="">Selecciona el marcador</option>
         </select>
       </div>
+
       <button type="submit">Enviar Pronóstico</button>
       <button type="button" onclick="location.href='index.html'">Inicio</button>
     </form>
@@ -60,12 +64,10 @@
         const data = await res.json();
         USUARIO_ESPECIAL = data.usuarioEspecial;
 
-        // 1. ASIGNAR NOMBRE DEL PLENO
+        // 1. ASIGNAR NOMBRE DEL PLENO (Directo de B16 vs C16)
         const labelP15 = document.getElementById("labelP15");
-        if (data.datosPartido15 && data.datosPartido15.local !== "Local") {
+        if (data.datosPartido15 && data.datosPartido15.local) {
           labelP15.innerHTML = `<strong>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</strong>`;
-        } else {
-          labelP15.innerHTML = "<strong>🔥 PLENO AL 15: Vetis vs Sevilla</strong>";
         }
 
         // 2. PARTIDOS 1-14
@@ -88,15 +90,12 @@
         nombres.forEach(n => {
           const opt = document.createElement("option");
           opt.value = n;
-          opt.textContent = (n === USUARIO_ESPECIAL) ? n + " ⭐ + pleno" : n;
+          opt.textContent = (n === USUARIO_ESPECIAL) ? n + " ⭐" : n;
           selN.appendChild(opt);
         });
 
         generarOpcionesPleno();
-      } catch (e) { 
-        console.error(e); 
-        document.getElementById("labelP15").innerText = "Error cargando equipos";
-      }
+      } catch (e) { console.error("Error cargando datos:", e); }
     }
 
     document.getElementById("nombre").addEventListener("change", function() {
@@ -117,10 +116,15 @@
       const formData = new FormData(e.target);
       const data = { nombre: formData.get("nombre"), p15: formData.get("p15") || "" };
       for (let i = 1; i <= 14; i++) { data["p" + i] = formData.get("p" + i); }
+
       try {
-        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
-        alert("✅ Pronóstico enviado.");
-        location.reload();
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        const r = await res.json();
+        if (r.resultado === "ok") { alert("✅ Pronóstico enviado."); location.reload(); }
       } catch (err) { alert("Error al enviar."); }
     });
 
