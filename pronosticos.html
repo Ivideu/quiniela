@@ -3,25 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pronósticos - Quiniela</title>
+  <title>Pronósticos de la Jornada</title>
   <style>
     body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
-    .container { max-width: 1100px; margin: auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-    h1 { text-align: center; color: #333; margin-bottom: 25px; }
-    .table-responsive { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; background: white; font-size: 14px; }
-    th, td { border: 1px solid #dee2e6; padding: 12px 8px; text-align: center; }
-    th { background: #0077cc; color: white; text-transform: uppercase; font-size: 13px; }
-    /* Resaltado columna P15 */
-    td:last-child, th:last-child { background-color: #f0f7ff; font-weight: bold; min-width: 90px; border-left: 2px solid #0077cc; }
-    tr:nth-child(even) { background: #f9f9f9; }
-    .btn-volver { display: inline-block; margin-top: 20px; background: #0077cc; color: white !important; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; }
+    .container { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h1 { text-align: center; color: #333; margin-bottom: 25px; font-size: 24px; }
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid #0077cc; }
+    th, td { border: 1px solid #dee2e6; padding: 12px 6px; text-align: center; font-size: 13px; }
+    
+    /* Cabecera Azul */
+    th { background-color: #0077cc; color: white; text-transform: uppercase; font-weight: bold; }
+    
+    /* Estilo columna P15 (Exacto a la imagen) */
+    .p15-header, .p15-cell {
+      background-color: #f0f7ff !important;
+      color: #333;
+      font-weight: bold;
+      border-left: 2px solid #0077cc;
+      min-width: 100px;
+    }
+    .p15-header { color: #f0f7ff !important; } /* Ocultar texto "P15" si quieres que se vea blanco como la imagen */
+
+    tr:nth-child(even) { background-color: #fcfcfc; }
+    
+    .btn-volver {
+      display: inline-block; margin-top: 20px; background: #0077cc; color: white !important;
+      padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Pronósticos de la Jornada</h1>
-    <div class="table-responsive">
+    <div class="table-container">
       <table id="tablaPronosticos">
         <thead><tr id="headerRow"></tr></thead>
         <tbody></tbody>
@@ -38,24 +53,25 @@
         const res = await fetch(API_URL);
         const data = await res.json();
         const filas = data.pronosticos;
-        if (!filas) return;
 
         // Cabecera
         const header = document.getElementById("headerRow");
-        header.innerHTML = filas[0].map(h => `<th>${h}</th>`).join("");
+        header.innerHTML = filas[0].map((h, i) => 
+          `<th class="${i === 15 ? 'p15-header' : ''}">${h}</th>`
+        ).join("");
 
         // Cuerpo
         const tbody = document.querySelector("#tablaPronosticos tbody");
         tbody.innerHTML = "";
         filas.slice(1).forEach(row => {
           const tr = document.createElement("tr");
-          // Recorremos las 16 columnas (0 a 15)
           let celdas = "";
           for(let i=0; i<16; i++) {
             let val = row[i] || "";
-            // Si el valor llega con formato de fecha ISO por error, lo limpiamos
+            // Limpiar fechas ISO
             if (val.toString().includes("T") && val.toString().includes("Z")) val = "";
-            celdas += `<td>${val}</td>`;
+            
+            celdas += `<td class="${i === 15 ? 'p15-cell' : ''}">${val}</td>`;
           }
           tr.innerHTML = celdas;
           tbody.appendChild(tr);
