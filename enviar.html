@@ -22,7 +22,7 @@
     <form id="quinielaForm">
       <label for="nombre">Selecciona tu nombre:</label>
       <select id="nombre" name="nombre" required>
-        <option value="">Cargando...</option>
+        <option value="">Cargando nombres...</option>
       </select>
 
       <div id="partidos"></div>
@@ -31,7 +31,6 @@
         <label id="labelP15" for="p15"><strong>CARGANDO PLENO...</strong></label>
         <select name="p15" id="p15">
           <option value="">Selecciona el resultado exacto</option>
-          <!-- Las combinaciones se generarán aquí -->
         </select>
       </div>
 
@@ -44,10 +43,10 @@
     const API_URL = "/api";
     let USUARIO_ESPECIAL = "";
 
-    // Generar combinaciones 0, 1, 2, M para el Pleno al 15
     function generarOpcionesPleno() {
       const valores = ["0", "1", "2", "M"];
       const select = document.getElementById("p15");
+      select.innerHTML = '<option value="">Selecciona el resultado exacto</option>';
       valores.forEach(l => {
         valores.forEach(v => {
           const opt = document.createElement("option");
@@ -64,37 +63,37 @@
         const data = await res.json();
         USUARIO_ESPECIAL = data.usuarioEspecial;
 
-        // 1. Partidos 1 al 14
-        const partidosDiv = document.getElementById("partidos");
-        const lista = data.partidos.slice(1, 15); 
-        lista.forEach((p, i) => {
+        // 1. Mostrar Partido 15 (Betis - Sevilla)
+        if (data.datosPartido15) {
+          document.getElementById("labelP15").innerHTML = `<strong>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</strong>`;
+        }
+
+        // 2. Cargar Partidos 1-14
+        const divP = document.getElementById("partidos");
+        divP.innerHTML = "";
+        data.partidos.slice(1, 15).forEach((p, i) => {
           const div = document.createElement("div");
           div.className = "match";
           div.innerHTML = `<label>Partido ${i+1}: ${p[1]} vs ${p[2]}</label>
             <select name="p${i+1}" required>
               <option value="">Elige</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>
             </select>`;
-          partidosDiv.appendChild(div);
+          divP.appendChild(div);
         });
 
-        // 2. Configurar nombres del Partido 15 (Betis - Sevilla)
-        if (data.datosPartido15) {
-          document.getElementById("labelP15").innerHTML = `<strong>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</strong>`;
-        }
-
-        // 3. Nombres de usuarios
-        const selectN = document.getElementById("nombre");
-        selectN.innerHTML = '<option value="">Selecciona tu nombre</option>';
+        // 3. Cargar Nombres
+        const selN = document.getElementById("nombre");
+        selN.innerHTML = '<option value="">Selecciona tu nombre</option>';
         const nombres = [...new Set(data.pronosticos.slice(1).map(f => f[0]))].filter(n => n);
         nombres.forEach(n => {
           const opt = document.createElement("option");
           opt.value = n;
           opt.textContent = (n === USUARIO_ESPECIAL) ? n + " ⭐" : n;
-          selectN.appendChild(opt);
+          selN.appendChild(opt);
         });
 
         generarOpcionesPleno();
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Error:", e); }
     }
 
     document.getElementById("nombre").addEventListener("change", function() {
@@ -113,9 +112,8 @@
     document.getElementById("quinielaForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const formData = new FormData(e.target);
-      const data = { nombre: formData.get("nombre") };
+      const data = { nombre: formData.get("nombre"), p15: formData.get("p15") || "" };
       for (let i = 1; i <= 14; i++) { data["p" + i] = formData.get("p" + i); }
-      data["p15"] = formData.get("p15") || "";
 
       try {
         const res = await fetch(API_URL, {
@@ -124,7 +122,7 @@
           body: JSON.stringify(data)
         });
         const r = await res.json();
-        if (r.resultado === "ok") { alert("✅ Pronóstico guardado."); location.reload(); }
+        if (r.resultado === "ok") { alert("✅ Pronóstico enviado."); location.reload(); }
       } catch (err) { alert("Error al enviar."); }
     });
 
