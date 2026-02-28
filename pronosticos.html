@@ -9,23 +9,31 @@
     .container { max-width: 1200px; margin: auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     h1 { text-align: center; color: #333; margin-bottom: 25px; }
     .table-responsive { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; border: 1px solid #0077cc; }
-    th, td { border: 1px solid #dee2e6; padding: 12px 6px; text-align: center; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; border: 2px solid #0077cc; }
+    th, td { border: 1px solid #999; padding: 12px 6px; text-align: center; font-size: 13px; }
     
-    /* Cabecera Azul */
+    /* Cabecera Azul Fuerte */
     th { background-color: #0077cc; color: white; text-transform: uppercase; font-weight: bold; }
 
-    /* --- EFECTO CEBRA (FILAS ALTERNAS) --- */
+    /* --- EFECTO CEBRA RESALTADO --- */
     /* Filas impares: Blanco */
     tr:nth-child(odd) { background-color: #ffffff; }
     
-    /* Filas pares: Azul muy claro para diferenciar */
-    tr:nth-child(even) { background-color: #f0f7ff; }
+    /* Filas pares: Azul resaltado (#b1d4fd) */
+    tr:nth-child(even) { background-color: #b1d4fd; }
 
-    /* Efecto al pasar el ratón para resaltar la fila */
-    tr:hover { background-color: #e2eeff !important; transition: 0.2s; }
+    /* Primera columna (Nombres) en negrita para mejor lectura */
+    td:first-child { font-weight: bold; color: #333; }
 
-    .btn-volver { display: inline-block; margin-top: 25px; background: #0077cc; color: white !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; }
+    /* Efecto al pasar el ratón */
+    tr:hover { background-color: #8dbdf0 !important; transition: 0.1s; }
+
+    .btn-volver { 
+      display: inline-block; margin-top: 25px; background: #0077cc; color: white !important; 
+      padding: 12px 24px; border-radius: 6px; font-weight: bold; text-decoration: none;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .btn-volver:hover { background: #005fa3; }
   </style>
 </head>
 <body>
@@ -52,7 +60,7 @@
 
         // 1. Dibujar Cabecera
         const header = document.getElementById("headerRow");
-        header.innerHTML = filas[0].map(h => `<th>${h}</th>`).join("");
+        header.innerHTML = filas.map(h => `<th>${h}</th>`).join("");
 
         // 2. Dibujar Cuerpo
         const tbody = document.querySelector("#tablaPronosticos tbody");
@@ -65,7 +73,7 @@
           // Recorremos las 16 columnas (Nombre + 15 partidos)
           for(let i=0; i<16; i++) {
             let val = row[i] || "";
-            // Limpieza de fechas ISO por si acaso
+            // Limpieza de seguridad para fechas accidentales de Google Sheets
             if (val.toString().includes("T") && val.toString().includes("Z")) val = "";
             htmlCeldas += `<td>${val}</td>`;
           }
