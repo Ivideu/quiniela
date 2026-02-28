@@ -59,18 +59,18 @@
         const data = await res.json();
         
         // CORRECCIÓN: Usamos 'Partidos' con P mayúscula para coincidir con el Apps Script
-        const Partidos = data.Partidos || data.Partidos; 
+        const partidos = data.Partidos || data.partidos; 
         const tbody = document.querySelector("#tablaResultados tbody");
         tbody.innerHTML = ""; 
 
-        if (!Partidos) {
+        if (!partidos) {
             console.error("No se encontró la hoja Partidos en el JSON");
             return;
         }
 
         // Empezamos en i=1 para saltar la cabecera (ID, Local, Visitante...)
-        for (let i = 1; i < Partidos.length; i++) {
-          const fila = Partidos[i];
+        for (let i = 1; i < partidos.length; i++) {
+          const fila = partidos[i];
           
           const tr = document.createElement("tr");
           tr.innerHTML = `
