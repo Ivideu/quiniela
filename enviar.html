@@ -13,13 +13,7 @@
     select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
     button { margin-top: 25px; width: 100%; padding: 12px; font-size: 16px; background-color: #0077cc; color: white; border: none; border-radius: 6px; cursor: pointer; }
     .match { margin-top: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-    
-    /* EL PLENO AL 15 EMPIEZA OCULTO */
-    #extra-match {
-      display: none; 
-      margin-top: 20px; padding: 15px;
-      background-color: #fff3cd; border: 2px solid #ffecb5; border-radius: 8px;
-    }
+    #extra-match { display: none; margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 2px solid #ffecb5; border-radius: 8px; }
   </style>
 </head>
 <body>
@@ -28,86 +22,91 @@
     <form id="quinielaForm">
       <label for="nombre">Selecciona tu nombre:</label>
       <select id="nombre" name="nombre" required>
-        <option value="">Cargando nombres...</option>
+        <option value="">Cargando...</option>
       </select>
 
       <div id="partidos"></div>
       
-      <!-- Bloque dinámico para el ID 15 (Betis - Sevilla) -->
       <div id="extra-match">
-        <label id="labelP15" for="p15"><strong>PARTIDO 15:</strong></label>
+        <label id="labelP15" for="p15"><strong>CARGANDO PLENO...</strong></label>
         <select name="p15" id="p15">
-          <option value="">Elige Goles (0, 1, 2, M)</option>
-          <option value="1-0">1-0</option>
-          <option value="0-1">0-1</option>
-          <option value="1-1">1-1</option>
-          <option value="M-M">M-M</option>
-          <!-- Puedes poner aquí las opciones que prefieras para el pleno -->
+          <option value="">Selecciona el resultado exacto</option>
+          <!-- Las combinaciones se generarán aquí -->
         </select>
       </div>
 
       <button type="submit">Enviar Pronóstico</button>
       <button type="button" onclick="location.href='index.html'">Inicio</button>
-     </form>
+    </form>
   </div>
 
   <script>
     const API_URL = "/api";
     let USUARIO_ESPECIAL = "";
 
-    async function inicializarApp() {
+    // Generar combinaciones 0, 1, 2, M para el Pleno al 15
+    function generarOpcionesPleno() {
+      const valores = ["0", "1", "2", "M"];
+      const select = document.getElementById("p15");
+      valores.forEach(l => {
+        valores.forEach(v => {
+          const opt = document.createElement("option");
+          opt.value = `${l}-${v}`;
+          opt.textContent = `${l} - ${v}`;
+          select.appendChild(opt);
+        });
+      });
+    }
+
+    async function inicializar() {
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-        
         USUARIO_ESPECIAL = data.usuarioEspecial;
 
-        // 1. Cargar Partidos (Solo del 1 al 14)
+        // 1. Partidos 1 al 14
         const partidosDiv = document.getElementById("partidos");
-        const listaPartidos = data.partidos.slice(1, 15); // Toma de la fila 2 a la 15 (IDs 1-14)
-        
-        listaPartidos.forEach((p, index) => {
+        const lista = data.partidos.slice(1, 15); 
+        lista.forEach((p, i) => {
           const div = document.createElement("div");
           div.className = "match";
-          div.innerHTML = `<label>Partido ${index+1}: ${p[1]} vs ${p[2]}</label>
-            <select name="p${index+1}" required>
+          div.innerHTML = `<label>Partido ${i+1}: ${p[1]} vs ${p[2]}</label>
+            <select name="p${i+1}" required>
               <option value="">Elige</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>
             </select>`;
           partidosDiv.appendChild(div);
         });
 
-        // 2. Configurar Partido 15 (Fila 16 del Excel)
+        // 2. Configurar nombres del Partido 15 (Betis - Sevilla)
         if (data.datosPartido15) {
           document.getElementById("labelP15").innerHTML = `<strong>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</strong>`;
         }
 
-        // 3. Cargar Nombres
-        const selectNombres = document.getElementById("nombre");
-        selectNombres.innerHTML = '<option value="">Selecciona tu nombre</option>';
-        const nombresUnicos = [...new Set(data.pronosticos.slice(1).map(f => f[0]))].filter(n => n);
-        
-        nombresUnicos.forEach(n => {
+        // 3. Nombres de usuarios
+        const selectN = document.getElementById("nombre");
+        selectN.innerHTML = '<option value="">Selecciona tu nombre</option>';
+        const nombres = [...new Set(data.pronosticos.slice(1).map(f => f[0]))].filter(n => n);
+        nombres.forEach(n => {
           const opt = document.createElement("option");
           opt.value = n;
-          opt.textContent = (n === USUARIO_ESPECIAL) ? n + " ⭐ (Te toca el 15)" : n;
-          selectNombres.appendChild(opt);
+          opt.textContent = (n === USUARIO_ESPECIAL) ? n + " ⭐" : n;
+          selectN.appendChild(opt);
         });
 
-      } catch (e) { alert("Error al cargar datos"); }
+        generarOpcionesPleno();
+      } catch (e) { console.error(e); }
     }
 
-    // Lógica para mostrar/ocultar el Pleno 15 según el nombre
     document.getElementById("nombre").addEventListener("change", function() {
-      const extraDiv = document.getElementById("extra-match");
-      const p15Select = document.getElementById("p15");
-      
+      const extra = document.getElementById("extra-match");
+      const p15 = document.getElementById("p15");
       if (this.value !== "" && this.value === USUARIO_ESPECIAL) {
-        extraDiv.style.display = "block";
-        p15Select.required = true;
+        extra.style.display = "block";
+        p15.required = true;
       } else {
-        extraDiv.style.display = "none";
-        p15Select.required = false;
-        p15Select.value = "";
+        extra.style.display = "none";
+        p15.required = false;
+        p15.value = "";
       }
     });
 
@@ -115,9 +114,8 @@
       e.preventDefault();
       const formData = new FormData(e.target);
       const data = { nombre: formData.get("nombre") };
-
       for (let i = 1; i <= 14; i++) { data["p" + i] = formData.get("p" + i); }
-      data["p15"] = formData.get("p15") || ""; // Se envía a la columna P del excel
+      data["p15"] = formData.get("p15") || "";
 
       try {
         const res = await fetch(API_URL, {
@@ -125,15 +123,12 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data)
         });
-        const result = await res.json();
-        if (result.resultado === "ok") {
-          alert("✅ Enviado.");
-          location.reload();
-        }
-      } catch (error) { alert("Error al enviar"); }
+        const r = await res.json();
+        if (r.resultado === "ok") { alert("✅ Pronóstico guardado."); location.reload(); }
+      } catch (err) { alert("Error al enviar."); }
     });
 
-    inicializarApp();
+    inicializar();
   </script>
 </body>
 </html>
