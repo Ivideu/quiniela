@@ -15,12 +15,12 @@
 
     /* --- ESTILO CEBRA RESALTADO --- */
     tr:nth-child(odd) { background-color: #ffffff; }
-    tr:nth-child(even) { background-color: #b1d4fd; } /* Azul resaltado pedido */
+    tr:nth-child(even) { background-color: #b1d4fd; } /* Azul #b1d4fd aplicado */
 
     tr:hover { background-color: #8dbdf0 !important; transition: 0.1s; }
 
     /* Estilo para la columna de Resultado */
-    td:nth-child(4) { font-weight: bold; color: #333; }
+    td:nth-child(4) { font-weight: bold; color: #0077cc; font-size: 16px; }
 
     .btn-volver {
       display: inline-block; margin-top: 25px; text-decoration: none; background: #0077cc; 
@@ -58,17 +58,20 @@
         const res = await fetch(API_URL);
         const data = await res.json();
         
-        // Obtenemos la hoja 'partidos' del objeto JSON
-        const partidos = data.partidos; 
+        // CORRECCIÓN: Usamos 'Partidos' con P mayúscula para coincidir con el Apps Script
+        const partidos = data.Partidos || data.partidos; 
         const tbody = document.querySelector("#tablaResultados tbody");
         tbody.innerHTML = ""; 
 
-        // Empezamos en i=1 para saltar la cabecera del Excel
+        if (!partidos) {
+            console.error("No se encontró la hoja Partidos en el JSON");
+            return;
+        }
+
+        // Empezamos en i=1 para saltar la cabecera (ID, Local, Visitante...)
         for (let i = 1; i < partidos.length; i++) {
           const fila = partidos[i];
           
-          // Mapeo según tu imagen: 
-          // Col A(0)=ID, Col B(1)=Local, Col C(2)=Visitante, Col D(3)=Resultado, Col E(4)=Hora
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td>${fila[0] || i}</td>
@@ -80,7 +83,7 @@
           tbody.appendChild(tr);
         }
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error cargando resultados:", error);
       }
     }
 
