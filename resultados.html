@@ -2,31 +2,26 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Resultados - Quiniela</title>
   <style>
     body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
-    .container { max-width: 800px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .container { max-width: 900px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     h1 { text-align: center; margin-bottom: 25px; color: #333; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid #0077cc; }
     th, td { border: 1px solid #ccc; padding: 12px; text-align: center; }
-    th { background: #0077cc; color: #fff; text-transform: uppercase; }
+    th { background: #0077cc; color: white; text-transform: uppercase; }
     
-    /* Filas alternas con el azul resaltado */
+    /* Filas alternas con el azul resaltado pedido */
     tr:nth-child(odd) { background-color: #ffffff; }
     tr:nth-child(even) { background-color: #b1d4fd; } 
-    
     tr:hover { background-color: #8dbdf0 !important; }
 
-    .btn-volver {
-      display: inline-block; margin-top: 20px; text-decoration: none; background: #0077cc; 
-      color: white !important; padding: 10px 15px; border-radius: 6px; text-align: center;
-    }
+    .btn-volver { display: inline-block; margin-top: 20px; text-decoration: none; background: #0077cc; color: white !important; padding: 10px 15px; border-radius: 6px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Resultados</h1>
+    <h1>Resultados Actualizados</h1>
     <table id="tablaResultados">
       <thead>
         <tr>
@@ -45,40 +40,31 @@
   <script>
     const API_URL = "/api";
 
-    async function cargarResultados() {
+    async function cargar() {
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-        
-        // LEEMOS 'partidos' EN MINÚSCULAS porque así lo guarda tu Apps Script
         const partidos = data.partidos; 
         const tbody = document.querySelector("#tablaResultados tbody");
         tbody.innerHTML = "";
 
-        if (!partidos || partidos.length <= 1) {
-          tbody.innerHTML = "<tr><td colspan='5'>No hay datos disponibles. Ejecuta 'actualizarCacheJSON' en Apps Script.</td></tr>";
-          return;
-        }
-
-        // Saltamos la fila 0 (cabecera)
-        for (let i = 1; i < partidos.length; i++) {
+        // Recorremos desde i=1 hasta i=15 (IDs 1 al 15 del Excel)
+        for (let i = 1; i <= 15; i++) {
           const p = partidos[i];
+          if (!p) continue;
           const tr = document.createElement("tr");
           tr.innerHTML = `
-            <td>${p[0] || i}</td>
-            <td>${p[1] || ""}</td>
-            <td>${p[2] || ""}</td>
+            <td>${p[0]}</td>
+            <td>${p[1]}</td>
+            <td>${p[2]}</td>
             <td><strong>${p[3] || "-"}</strong></td>
-            <td>${p[4] || ""}</td>
+            <td>${p[4]}</td>
           `;
           tbody.appendChild(tr);
         }
-      } catch (error) {
-        console.error("Error cargando resultados:", error);
-      }
+      } catch (e) { console.error(e); }
     }
-
-    cargarResultados();
+    cargar();
   </script>
 </body>
 </html>
