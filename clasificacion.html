@@ -5,102 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clasificación - Quiniela</title>
   <style>
-    * { box-sizing: border-box; }
-
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      align-items: flex-start;
-    }
-
-    .container {
-      max-width: 600px;
-      width: 100%;
-      background: #fff;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 25px;
-      color: #333;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      border: 2px solid #0077cc;
-    }
-
-    th, td {
-      padding: 12px;
-      border: 1px solid #dee2e6;
-      text-align: center; /* Centrado para que se vea más limpio */
-    }
-
-    th {
-      background-color: #0077cc;
-      color: white;
-      text-transform: uppercase;
-      font-weight: bold;
-    }
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h1 { text-align: center; margin-bottom: 25px; color: #333; }
+    table { width: 100%; border-collapse: collapse; border: 2px solid #0077cc; }
+    th, td { padding: 12px; border: 1px solid #dee2e6; text-align: center; }
+    th { background-color: #0077cc; color: white; text-transform: uppercase; font-weight: bold; }
 
     /* --- ESTILO CEBRA RESALTADO --- */
     tr:nth-child(odd) { background-color: #ffffff; }
-    tr:nth-child(even) { background-color: #b1d4fd; } /* Azul #b1d4fd */
-
+    tr:nth-child(even) { background-color: #b1d4fd; } /* Azul #b1d4fd aplicado */
     tr:hover { background-color: #8dbdf0 !important; transition: 0.1s; }
 
-    /* Estilo para los nombres y puntos */
+    /* Estilos para celdas */
     td:first-child { font-weight: bold; text-align: left; }
-    td:last-child { font-weight: bold; font-size: 1.1em; color: #0077cc; }
+    td:last-child { font-weight: bold; color: #0077cc; font-size: 1.1em; }
 
     .btn-volver {
-      display: block;
-      margin-top: 25px;
-      text-decoration: none;
-      background: #0077cc;
-      color: white !important;
-      padding: 12px 15px;
-      border-radius: 6px;
-      text-align: center;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-
-    .btn-volver:hover {
-      background: #005fa3;
+      display: block; margin-top: 25px; text-decoration: none; background: #0077cc; 
+      color: white !important; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Clasificación de Aciertos</h1>
+    <h1>Clasificación de aciertos</h1>
     <table>
       <thead>
         <tr>
-          <th>Jugador</th>
-          <th>Aciertos</th>
+          <th>JUGADOR</th>
+          <th>ACIERTOS</th>
         </tr>
       </thead>
       <tbody id="tablaClasificacion">
-        <!-- Los datos se cargarán aquí -->
+        <tr><td colspan="2">Cargando datos...</td></tr>
       </tbody>
     </table>
-
     <a class="btn-volver" href="index.html">⬅ Volver a inicio</a>
   </div>
 
   <script>
-    // Usamos la ruta relativa /api para mayor fiabilidad
+    // IMPORTANTE: Asegúrate de que esta URL sea la de tu "Implementación" de Apps Script
     const API_URL = "/api"; 
 
     async function cargarClasificacion() {
@@ -108,19 +53,18 @@
         const res = await fetch(API_URL);
         const data = await res.json();
         
-        // CORRECCIÓN: Buscamos la clave en minúsculas 'clasificacion'
-        // que es como la envía tu Apps Script actual.
+        // CORRECCIÓN: Tu Apps Script guarda la clave en MINÚSCULAS
         const clasificacion = data.clasificacion;
 
         const tbody = document.getElementById("tablaClasificacion");
-        tbody.innerHTML = ""; // Limpiar tabla antes de cargar
+        tbody.innerHTML = ""; 
 
         if (!clasificacion || clasificacion.length <= 1) {
-          tbody.innerHTML = "<tr><td colspan='2'>No hay datos disponibles</td></tr>";
+          tbody.innerHTML = "<tr><td colspan='2'>No hay datos disponibles en el Excel</td></tr>";
           return;
         }
 
-        // Ignoramos la fila 0 (encabezados del Excel)
+        // Saltamos la fila 0 (Nombre, Aciertos) y recorremos el resto
         clasificacion.slice(1).forEach(fila => {
           const nombre = fila[0] || "";
           const aciertos = fila[1] !== undefined ? fila[1] : 0;
@@ -132,10 +76,10 @@
           }
         });
       } catch (error) {
-        console.error("Error cargando la clasificación:", error);
+        console.error("Error:", error);
+        document.getElementById("tablaClasificacion").innerHTML = "<tr><td colspan='2'>Error de conexión</td></tr>";
       }
     }
-
     cargarClasificacion();
   </script>
 </body>
