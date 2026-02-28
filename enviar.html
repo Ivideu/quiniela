@@ -64,7 +64,7 @@
         const data = await res.json();
         USUARIO_ESPECIAL = data.usuarioEspecial;
 
-        // 1. ASIGNAR NOMBRE DEL PLENO (Directo de B16 vs C16)
+        // 1. ASIGNAR NOMBRE DEL PLENO
         const labelP15 = document.getElementById("labelP15");
         if (data.datosPartido15 && data.datosPartido15.local) {
           labelP15.innerHTML = `<strong>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</strong>`;
@@ -76,6 +76,7 @@
         data.partidos.slice(1, 15).forEach((p, i) => {
           const div = document.createElement("div");
           div.className = "match";
+          // Usamos p[1] y p[2] para mostrar los nombres de los equipos del Excel
           div.innerHTML = `<label>Partido ${i+1}: ${p[1]} vs ${p[2]}</label>
             <select name="p${i+1}" required>
               <option value="">Elige</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>
