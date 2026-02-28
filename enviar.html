@@ -120,7 +120,7 @@
       }
     }
 
-    async function cargarNombres() {
+async function cargarNombres() {
       try {
         const res = await fetch(API_URL);
         const { pronosticos } = await res.json();
