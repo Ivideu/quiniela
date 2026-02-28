@@ -5,70 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Resultados - Quiniela</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 800px;
-      margin: auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #333;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-    }
-    th {
-      background: #0077cc;
-      color: #fff;
-    }
-    tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-        a {
-      display: inline-block;
-      margin-top: 20px;
-      text-decoration: none;
-      background: #0077cc;
-      color: white !important;
-      padding: 10px 15px;
-      border-radius: 6px;
-      text-align: center;
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
+    .container { max-width: 900px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h1 { text-align: center; margin-bottom: 25px; color: #333; }
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; border: 2px solid #0077cc; }
+    th, td { border: 1px solid #dee2e6; padding: 12px 8px; text-align: center; font-size: 14px; }
+    th { background: #0077cc; color: white; text-transform: uppercase; font-weight: bold; }
+
+    /* Estilo de filas alternas resaltado */
+    tr:nth-child(odd) { background-color: #ffffff; }
+    tr:nth-child(even) { background-color: #b1d4fd; } /* Azul resaltado */
+
+    tr:hover { background-color: #8dbdf0 !important; transition: 0.1s; }
+
+    /* Estilo para la columna de Resultado (Res) */
+    td:nth-child(4) { font-weight: bold; color: #0077cc; font-size: 16px; }
+
+    .btn-volver {
+      display: inline-block; margin-top: 25px; text-decoration: none; background: #0077cc; 
+      color: white !important; padding: 12px 24px; border-radius: 6px; font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Resultados</h1>
-    <table id="tablaResultados">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Local</th>
-          <th>Visitante</th>
-          <th>Res</th>
-          <th>Hora</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <a href="index.html">⬅ Volver</a>
+    <h1>Resultados de los Partidos</h1>
+    <div class="table-responsive">
+      <table id="tablaResultados">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Local</th>
+            <th>Visitante</th>
+            <th>Res</th>
+            <th>Hora</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Se llena dinámicamente -->
+        </tbody>
+      </table>
+    </div>
+    <a href="index.html" class="btn-volver">⬅ Volver</a>
   </div>
 
   <script>
@@ -78,22 +57,33 @@
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-        const partidos = data.partidos.slice(1); // quitamos cabecera
-
+        
+        // CORRECCIÓN: Intentamos leer con P mayúscula o minúscula según lo que envíe el servidor
+        const partidos = data.Partidos || data.partidos; 
         const tbody = document.querySelector("#tablaResultados tbody");
-        partidos.forEach((p, i) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${i + 1}</td>
-            <td>${p[1]}</td>
-            <td>${p[2]}</td>
-            <td>${p[3] || "-"}</td>
-            <td>${p[4]}</td>
+        tbody.innerHTML = ""; 
 
+        if (!partidos) {
+            console.error("No se encontraron datos de partidos en la API");
+            return;
+        }
 
+        // Empezamos en i=1 para saltar la fila de cabecera del Excel
+        for (let i = 1; i < partidos.length; i++) {
+          const fila = partidos[i];
+          
+          // Mapeo según tu imagen de Excel: 
+          // fila[0]=ID, fila[1]=Local, fila[2]=Visitante, fila[3]=Resultado, fila[4]=Hora
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${fila[0] || i}</td>
+            <td>${fila[1] || ""}</td>
+            <td>${fila[2] || ""}</td>
+            <td>${fila[3] || "-"}</td>
+            <td>${fila[4] || ""}</td>
           `;
-          tbody.appendChild(row);
-        });
+          tbody.appendChild(tr);
+        }
       } catch (error) {
         console.error("Error cargando resultados:", error);
       }
