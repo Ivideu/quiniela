@@ -3,17 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clasificación</title>
+  <title>Clasificación - Quiniela</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: 'Segoe UI', sans-serif;
       background-color: #f4f6f8;
       margin: 0;
-      padding: 0;
+      padding: 20px;
       display: flex;
       justify-content: center;
       min-height: 100vh;
@@ -24,15 +22,14 @@
       max-width: 600px;
       width: 100%;
       background: #fff;
-      margin: 40px 20px;
       padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
 
     h1 {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
       color: #333;
     }
 
@@ -40,43 +37,47 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
+      border: 2px solid #0077cc;
     }
 
     th, td {
       padding: 12px;
-      border: 1px solid #ccc;
-      text-align: left;
+      border: 1px solid #dee2e6;
+      text-align: center; /* Centrado para que se vea más limpio */
     }
 
     th {
       background-color: #0077cc;
       color: white;
+      text-transform: uppercase;
+      font-weight: bold;
     }
 
-    tr:nth-child(even) {
-      background-color: #f2f2f2;
-    }
+    /* --- ESTILO CEBRA RESALTADO --- */
+    tr:nth-child(odd) { background-color: #ffffff; }
+    tr:nth-child(even) { background-color: #b1d4fd; } /* Azul #b1d4fd */
 
-    .back-link {
+    tr:hover { background-color: #8dbdf0 !important; transition: 0.1s; }
+
+    /* Estilo para los nombres y puntos */
+    td:first-child { font-weight: bold; text-align: left; }
+    td:last-child { font-weight: bold; font-size: 1.1em; color: #0077cc; }
+
+    .btn-volver {
       display: block;
-      text-align: center;
-      margin-top: 20px;
-      color: #0077cc;
-      text-decoration: none;
-    }
-
-    .back-link:hover {
-      text-decoration: underline;
-    }
-        a {
-      display: inline-block;
-      margin-top: 20px;
+      margin-top: 25px;
       text-decoration: none;
       background: #0077cc;
       color: white !important;
-      padding: 10px 15px;
+      padding: 12px 15px;
       border-radius: 6px;
       text-align: center;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+
+    .btn-volver:hover {
+      background: #005fa3;
     }
   </style>
 </head>
@@ -90,28 +91,45 @@
           <th>Aciertos</th>
         </tr>
       </thead>
-      <tbody id="tablaClasificacion"></tbody>
+      <tbody id="tablaClasificacion">
+        <!-- Los datos se cargarán aquí -->
+      </tbody>
     </table>
 
-    <a class="back-link" href="index.html">← Volver a inicio</a>
+    <a class="btn-volver" href="index.html">⬅ Volver a inicio</a>
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
+    // Usamos la ruta relativa /api para mayor fiabilidad
+    const API_URL = "/api"; 
 
     async function cargarClasificacion() {
       try {
         const res = await fetch(API_URL);
-        const { clasificacion } = await res.json();
+        const data = await res.json();
+        
+        // CORRECCIÓN: Buscamos la clave en minúsculas 'clasificacion'
+        // que es como la envía tu Apps Script actual.
+        const clasificacion = data.clasificacion;
 
-        const tabla = document.getElementById("tablaClasificacion");
+        const tbody = document.getElementById("tablaClasificacion");
+        tbody.innerHTML = ""; // Limpiar tabla antes de cargar
 
-        // Ignoramos encabezados y procesamos solo datos
+        if (!clasificacion || clasificacion.length <= 1) {
+          tbody.innerHTML = "<tr><td colspan='2'>No hay datos disponibles</td></tr>";
+          return;
+        }
+
+        // Ignoramos la fila 0 (encabezados del Excel)
         clasificacion.slice(1).forEach(fila => {
-          const [nombre, aciertos] = fila;
-          const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
-          tabla.appendChild(tr);
+          const nombre = fila[0] || "";
+          const aciertos = fila[1] !== undefined ? fila[1] : 0;
+          
+          if (nombre.trim() !== "") {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
+            tbody.appendChild(tr);
+          }
         });
       } catch (error) {
         console.error("Error cargando la clasificación:", error);
