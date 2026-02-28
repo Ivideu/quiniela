@@ -14,7 +14,7 @@
 
     /* --- ESTILO CEBRA RESALTADO --- */
     tr:nth-child(odd) { background-color: #ffffff; }
-    tr:nth-child(even) { background-color: #b1d4fd; } /* Azul #b1d4fd aplicado */
+    tr:nth-child(even) { background-color: #b1d4fd; } /* Azul resaltado pedido */
     tr:hover { background-color: #8dbdf0 !important; transition: 0.1s; }
 
     /* Estilos para celdas */
@@ -29,7 +29,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Clasificación de aciertos</h1>
+    <h1>Clasificación de Aciertos</h1>
     <table>
       <thead>
         <tr>
@@ -45,7 +45,7 @@
   </div>
 
   <script>
-    // IMPORTANTE: Asegúrate de que esta URL sea la de tu "Implementación" de Apps Script
+    // IMPORTANTE: Usa la ruta relativa /api si estás en el mismo servidor
     const API_URL = "/api"; 
 
     async function cargarClasificacion() {
@@ -53,7 +53,7 @@
         const res = await fetch(API_URL);
         const data = await res.json();
         
-        // CORRECCIÓN: Tu Apps Script guarda la clave en MINÚSCULAS
+        // CORRECCIÓN: Buscamos 'clasificacion' en minúsculas (según tu Apps Script)
         const clasificacion = data.clasificacion;
 
         const tbody = document.getElementById("tablaClasificacion");
@@ -64,7 +64,7 @@
           return;
         }
 
-        // Saltamos la fila 0 (Nombre, Aciertos) y recorremos el resto
+        // Saltamos la fila 0 (Nombre, Aciertos) y recorremos los jugadores
         clasificacion.slice(1).forEach(fila => {
           const nombre = fila[0] || "";
           const aciertos = fila[1] !== undefined ? fila[1] : 0;
@@ -76,8 +76,8 @@
           }
         });
       } catch (error) {
-        console.error("Error:", error);
-        document.getElementById("tablaClasificacion").innerHTML = "<tr><td colspan='2'>Error de conexión</td></tr>";
+        console.error("Error cargando clasificación:", error);
+        document.getElementById("tablaClasificacion").innerHTML = "<tr><td colspan='2'>Error de conexión con la API</td></tr>";
       }
     }
     cargarClasificacion();
