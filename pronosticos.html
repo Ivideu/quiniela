@@ -5,74 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pronósticos - Quiniela</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 1100px;
-      margin: auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 30px;
-      color: #333;
-      font-size: 28px;
-    }
-    .table-responsive {
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 14px;
-      background: white;
-    }
-    th, td {
-      border: 1px solid #dee2e6;
-      padding: 12px 8px;
-      text-align: center;
-    }
-    th {
-      background: #0077cc;
-      color: #fff;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    /* Estilo especial para la columna P15 */
-    th:last-child, td:last-child {
-      background-color: #eef7ff;
-      font-weight: bold;
-      min-width: 80px;
-    }
-    tr:nth-child(even) {
-      background: #f8f9fa;
-    }
-    tr:hover {
-      background-color: #f1f4f7;
-    }
-    .btn-volver {
-      display: inline-block;
-      margin-top: 25px;
-      text-decoration: none;
-      background: #0077cc;
-      color: white !important;
-      padding: 12px 24px;
-      border-radius: 6px;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-    .btn-volver:hover {
-      background: #005fa3;
-    }
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
+    .container { max-width: 1100px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h1 { text-align: center; margin-bottom: 30px; color: #333; }
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { border: 1px solid #dee2e6; padding: 12px 8px; text-align: center; }
+    th { background: #0077cc; color: white; font-size: 13px; text-transform: uppercase; }
+    /* Estilo para destacar la columna P15 */
+    td:last-child, th:last-child { background-color: #f0f7ff; font-weight: bold; min-width: 90px; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    .btn-volver { display: inline-block; margin-top: 25px; text-decoration: none; background: #0077cc; color: white !important; padding: 10px 20px; border-radius: 6px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -80,12 +23,8 @@
     <h1>Pronósticos de la Jornada</h1>
     <div class="table-responsive">
       <table id="tablaPronosticos">
-        <thead>
-          <tr id="headerRow"></tr>
-        </thead>
-        <tbody>
-          <!-- Los datos se cargarán aquí -->
-        </tbody>
+        <thead><tr id="headerRow"></tr></thead>
+        <tbody></tbody>
       </table>
     </div>
     <a href="index.html" class="btn-volver">⬅ Volver al Inicio</a>
@@ -93,19 +32,6 @@
 
   <script>
     const API_URL = "/api";
-
-    // Función para limpiar fechas extrañas que mete Google Sheets en el P15
-    function formatearResultado(valor) {
-      if (!valor) return "";
-      
-      // Si Google Sheets envió una fecha ISO (como la de tu imagen)
-      if (typeof valor === "string" && valor.includes("T") && valor.includes("Z")) {
-        // Intentamos extraer la hora/minutos si era un marcador tipo 1-2 o similar
-        // Pero lo más seguro para quinielas es limpiar cualquier objeto Date
-        return "Pendiente"; 
-      }
-      return valor;
-    }
 
     async function cargarPronosticos() {
       try {
@@ -115,34 +41,34 @@
 
         if (!pronosticos || pronosticos.length === 0) return;
 
-        // 1. Crear Cabecera
+        // 1. Dibujar Cabecera
         const header = document.getElementById("headerRow");
         header.innerHTML = pronosticos[0].map(col => `<th>${col}</th>`).join("");
 
-        // 2. Llenar Cuerpo de la Tabla
+        // 2. Dibujar Filas
         const tbody = document.querySelector("#tablaPronosticos tbody");
-        tbody.innerHTML = ""; // Limpiar antes de cargar
+        tbody.innerHTML = "";
 
         pronosticos.slice(1).forEach(row => {
           const tr = document.createElement("tr");
           
-          const celdas = row.map((col, index) => {
-            // Si es la última columna (P15), aplicamos limpieza
-            if (index === row.length - 1) {
-              const valorLimpio = formatearResultado(col);
-              return `<td>${valorLimpio}</td>`;
-            }
-            return `<td>${col || ""}</td>`;
-          }).join("");
-
-          tr.innerHTML = celdas;
+          // Mapeamos cada celda. Si la celda está vacía, ponemos espacio.
+          // Forzamos que se muestren hasta la columna 16 (índice 15)
+          let htmlFila = "";
+          for(let i=0; i<16; i++) {
+            let valor = row[i] || "";
+            // Si el valor es "Pendiente" o una fecha ISO extraña, lo dejamos limpio
+            if (valor.toString().includes("T") && valor.toString().includes("Z")) valor = "";
+            htmlFila += `<td>${valor}</td>`;
+          }
+          
+          tr.innerHTML = htmlFila;
           tbody.appendChild(tr);
         });
       } catch (error) {
-        console.error("Error cargando pronósticos:", error);
+        console.error("Error:", error);
       }
     }
-
     cargarPronosticos();
   </script>
 </body>
