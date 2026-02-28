@@ -5,91 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pronósticos - Quiniela</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 1000px;
-      margin: auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #333;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      font-size: 14px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background: #0077cc;
-      color: #fff;
-    }
-    tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-        a {
-      display: inline-block;
-      margin-top: 20px;
-      text-decoration: none;
-      background: #0077cc;
-      color: white !important;
-      padding: 10px 15px;
-      border-radius: 6px;
-      text-align: center;
-    }
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
+    .container { max-width: 1100px; margin: auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h1 { text-align: center; color: #333; margin-bottom: 25px; }
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; background: white; font-size: 14px; }
+    th, td { border: 1px solid #dee2e6; padding: 12px 8px; text-align: center; }
+    th { background: #0077cc; color: white; text-transform: uppercase; font-size: 13px; }
+    /* Resaltado columna P15 */
+    td:last-child, th:last-child { background-color: #f0f7ff; font-weight: bold; min-width: 90px; border-left: 2px solid #0077cc; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    .btn-volver { display: inline-block; margin-top: 20px; background: #0077cc; color: white !important; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Pronósticos</h1>
-    <table id="tablaPronosticos">
-      <thead>
-        <tr id="headerRow"></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <a href="index.html">⬅ Volver</a>
+    <h1>Pronósticos de la Jornada</h1>
+    <div class="table-responsive">
+      <table id="tablaPronosticos">
+        <thead><tr id="headerRow"></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <a href="index.html" class="btn-volver">⬅ Volver</a>
   </div>
 
   <script>
     const API_URL = "/api";
 
-    async function cargarPronosticos() {
+    async function cargar() {
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-        const pronosticos = data.pronosticos;
+        const filas = data.pronosticos;
+        if (!filas) return;
 
+        // Cabecera
         const header = document.getElementById("headerRow");
-        header.innerHTML = pronosticos[0].map(col => `<th>${col}</th>`).join("");
+        header.innerHTML = filas[0].map(h => `<th>${h}</th>`).join("");
 
+        // Cuerpo
         const tbody = document.querySelector("#tablaPronosticos tbody");
-        pronosticos.slice(1).forEach(row => {
+        tbody.innerHTML = "";
+        filas.slice(1).forEach(row => {
           const tr = document.createElement("tr");
-          tr.innerHTML = row.map(col => `<td>${col}</td>`).join("");
+          // Recorremos las 16 columnas (0 a 15)
+          let celdas = "";
+          for(let i=0; i<16; i++) {
+            let val = row[i] || "";
+            // Si el valor llega con formato de fecha ISO por error, lo limpiamos
+            if (val.toString().includes("T") && val.toString().includes("Z")) val = "";
+            celdas += `<td>${val}</td>`;
+          }
+          tr.innerHTML = celdas;
           tbody.appendChild(tr);
         });
-      } catch (error) {
-        console.error("Error cargando pronósticos:", error);
-      }
+      } catch (e) { console.error(e); }
     }
-
-    cargarPronosticos();
+    cargar();
   </script>
 </body>
 </html>
