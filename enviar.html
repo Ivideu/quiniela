@@ -22,18 +22,15 @@
     <form id="quinielaForm">
       <label for="nombre">Selecciona tu nombre:</label>
       <select id="nombre" name="nombre" required>
-        <option value="">Cargando nombres...</option>
+        <option value="">Cargando...</option>
       </select>
-
       <div id="partidos"></div>
-      
       <div id="extra-match">
         <label id="labelP15" for="p15"><strong>CARGANDO PLENO...</strong></label>
         <select name="p15" id="p15">
           <option value="">Selecciona el resultado exacto</option>
         </select>
       </div>
-
       <button type="submit">Enviar Pronóstico</button>
       <button type="button" onclick="location.href='index.html'">Inicio</button>
     </form>
@@ -46,7 +43,7 @@
     function generarOpcionesPleno() {
       const valores = ["0", "1", "2", "M"];
       const select = document.getElementById("p15");
-      select.innerHTML = '<option value="">Selecciona el resultado exacto</option>';
+      select.innerHTML = '<option value="">Selecciona el marcador</option>';
       valores.forEach(l => {
         valores.forEach(v => {
           const opt = document.createElement("option");
@@ -63,12 +60,12 @@
         const data = await res.json();
         USUARIO_ESPECIAL = data.usuarioEspecial;
 
-        // 1. Mostrar Partido 15 (Betis - Sevilla)
+        // 1. Mostrar nombres del Partido 15 (Betis vs Sevilla)
         if (data.datosPartido15) {
           document.getElementById("labelP15").innerHTML = `<strong>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</strong>`;
         }
 
-        // 2. Cargar Partidos 1-14
+        // 2. Partidos 1-14
         const divP = document.getElementById("partidos");
         divP.innerHTML = "";
         data.partidos.slice(1, 15).forEach((p, i) => {
@@ -81,7 +78,7 @@
           divP.appendChild(div);
         });
 
-        // 3. Cargar Nombres
+        // 3. Nombres de usuarios
         const selN = document.getElementById("nombre");
         selN.innerHTML = '<option value="">Selecciona tu nombre</option>';
         const nombres = [...new Set(data.pronosticos.slice(1).map(f => f[0]))].filter(n => n);
@@ -93,7 +90,7 @@
         });
 
         generarOpcionesPleno();
-      } catch (e) { console.error("Error:", e); }
+      } catch (e) { console.error(e); }
     }
 
     document.getElementById("nombre").addEventListener("change", function() {
@@ -114,13 +111,8 @@
       const formData = new FormData(e.target);
       const data = { nombre: formData.get("nombre"), p15: formData.get("p15") || "" };
       for (let i = 1; i <= 14; i++) { data["p" + i] = formData.get("p" + i); }
-
       try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
-        });
+        const res = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
         const r = await res.json();
         if (r.resultado === "ok") { alert("✅ Pronóstico enviado."); location.reload(); }
       } catch (err) { alert("Error al enviar."); }
