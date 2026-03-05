@@ -6,97 +6,93 @@
   <title>Tu Quiniela</title>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 0; display: flex; justify-content: center; min-height: 100vh; align-items: flex-start; }
-    .container { max-width: 600px; width: 100%; background: #fff; margin: 40px 20px; padding: 30px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
-    h1 { text-align: center; margin-bottom: 20px; color: #333; }
-    label { display: block; margin-top: 15px; font-weight: bold; color: #555; font-size: 1.1em; }
-    select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-    button { margin-top: 25px; width: 100%; padding: 12px; font-size: 16px; background-color: #0077cc; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
-    button:hover { background-color: #005fa3; }
-    .match { margin-top: 10px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-    #extra-match { display: none; margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 2px solid #ffecb5; border-radius: 8px; }
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .container { max-width: 600px; width: 100%; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    h1 { text-align: center; color: #1a1a1a; margin-bottom: 25px; border-bottom: 2px solid #0077cc; padding-bottom: 10px; }
     
-    /* --- ESTILOS PARA LA RECOMENDACIÓN (Columna I) --- */
-    .recomendacion {
-      margin-top: 8px;
-      margin-bottom: 10px;
-      padding: 8px 12px;
-      background-color: #e8f4fd;
-      border-left: 4px solid #0077cc;
-      border-radius: 4px;
-      font-size: 14px;
-      color: #333;
+    /* Contenedor de cada partido */
+    .match-card {
+      margin-bottom: 20px;
+      border: 1px solid #e1e4e8;
+      border-radius: 8px;
+      overflow: hidden; /* Para que el fondo del título respete el borde redondeado */
+      background-color: #fff;
     }
-    .recomendacion strong { color: #005fa3; }
 
-    /* --- ESTILOS PARA LOS PORCENTAJES (Columnas F, G, H) --- */
-    .prob-box {
-      display: flex;
-      gap: 6px;
-      margin-top: 8px;
-      margin-bottom: 8px;
+    /* Diferenciación para no liarse (fondo alterno suave) */
+    .match-card:nth-child(odd) {
+      background-color: #fafbfc;
     }
-    .prob-item {
-      flex: 1;
-      text-align: center;
-      padding: 6px 2px;
-      border-radius: 4px;
-      color: white;
+
+    /* Título del partido destacado */
+    .match-header {
+      background-color: #f1f3f5;
+      padding: 10px 15px;
+      border-bottom: 1px solid #e1e4e8;
       font-weight: bold;
-      font-size: 13px;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
     }
-    .prob-1 { background-color: #28a745; } /* Verde para Victoria Local */
-    .prob-x { background-color: #ffc107; color: #333; } /* Amarillo para Empate */
-    .prob-2 { background-color: #dc3545; } /* Rojo para Victoria Visitante */
+
+    .match-body { padding: 15px; }
+
+    label { display: block; margin-bottom: 8px; font-weight: bold; color: #444; }
+    
+    /* Bloques de probabilidad */
+    .prob-box { display: flex; gap: 4px; margin-bottom: 12px; }
+    .prob-item { flex: 1; text-align: center; padding: 6px; border-radius: 4px; color: white; font-size: 12px; font-weight: bold; }
+    .prob-1 { background-color: #28a745; }
+    .prob-x { background-color: #ffc107; color: #333; }
+    .prob-2 { background-color: #dc3545; }
+
+    /* Análisis IA */
+    .recomendacion { 
+      background-color: #e8f4fd; 
+      border-left: 4px solid #0077cc; 
+      padding: 10px; 
+      margin-bottom: 12px; 
+      font-size: 13px; 
+      color: #2c3e50;
+    }
+
+    select { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; background-color: #fff; font-size: 15px; }
+    select:focus { border-color: #0077cc; outline: none; }
+
+    button { width: 100%; padding: 14px; background: #0077cc; color: white; border: none; border-radius: 6px; margin-top: 20px; cursor: pointer; font-size: 16px; font-weight: bold; }
+    #extra-match { display: none; background: #fff3cd; padding: 15px; margin-top: 15px; border-radius: 8px; border: 1px solid #ffeeba; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Tu Quiniela</h1>
     <form id="quinielaForm">
-      <label for="nombre">Selecciona tu nombre:</label>
-      <select id="nombre" name="nombre" required>
-        <option value="">Cargando nombres...</option>
-      </select>
-
-      <div id="partidos"></div>
-      
-      <div id="extra-match">
-        <label id="labelP15" for="p15"><strong>CARGANDO PLENO...</strong></label>
-        <select name="p15" id="p15">
-          <option value="">Selecciona el marcador</option>
+      <div style="margin-bottom: 25px;">
+        <label>👤 ¿Quién eres?</label>
+        <select id="nombre" name="nombre" required>
+          <option value="">Cargando nombres...</option>
         </select>
       </div>
 
-      <button type="submit">Enviar Pronóstico</button>
-      <button type="button" onclick="location.href='index.html'">Inicio</button>
+      <div id="partidos"></div>
+
+      <div id="extra-match">
+        <label id="labelP15">Pleno al 15</label>
+        <select name="p15" id="p15"></select>
+      </div>
+
+      <button type="submit">🚀 Enviar mi Pronóstico</button>
     </form>
   </div>
 
   <script>
-    // ¡RECUERDA SUSTITUIR ESTO POR TU URL DE GOOGLE APPS SCRIPT!
-    const API_URL = "/api"; 
+    const API_URL = "TU_URL_DE_APPS_SCRIPT_AQUI"; // RECUERDA CAMBIAR ESTO
     let USUARIO_ESPECIAL = "";
 
-    function generarOpcionesPleno() {
-      const valores = ["0", "1", "2", "M"];
-      const select = document.getElementById("p15");
-      select.innerHTML = '<option value="">Selecciona el marcador</option>';
-      valores.forEach(l => {
-        valores.forEach(v => {
-          const opt = document.createElement("option");
-          opt.value = `${l}-${v}`;
-          opt.textContent = `${l} - ${v}`;
-          select.appendChild(opt);
-        });
-      });
-    }
-
-    // Función para convertir los datos del Excel a porcentaje visual (ej. 0.38 -> 38%)
-    function formatearPorcentaje(valor) {
-      if (valor === undefined || valor === "") return "-";
-      if (typeof valor === 'number') return Math.round(valor * 100) + "%";
-      return valor; 
+    function formatPct(val) {
+      if (!val || val === "-") return "0%";
+      if (typeof val === 'number') return Math.round(val * 100) + "%";
+      return val.toString().includes('%') ? val : val + "%";
     }
 
     async function inicializar() {
@@ -105,90 +101,70 @@
         const data = await res.json();
         USUARIO_ESPECIAL = data.usuarioEspecial;
 
-        // 1. ASIGNAR NOMBRE DEL PLENO
-        const labelP15 = document.getElementById("labelP15");
-        if (data.datosPartido15 && data.datosPartido15.local) {
-          labelP15.innerHTML = `<strong>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</strong>`;
-        }
-
-        // 2. PARTIDOS 1-14
         const divP = document.getElementById("partidos");
         divP.innerHTML = "";
+        
         data.partidos.slice(1, 15).forEach((p, i) => {
-          const div = document.createElement("div");
-          div.className = "match";
-          
-          // Capturamos las columnas
-          const prob1 = formatearPorcentaje(p[5]); // Columna F
-          const probX = formatearPorcentaje(p[6]); // Columna G
-          const prob2 = formatearPorcentaje(p[7]); // Columna H
-          const textoPronostico = p[8] ? p[8] : "Sin datos de análisis"; // Columna I
-
-          div.innerHTML = `
-            <label>Partido ${i+1}: ${p[1]} vs ${p[2]}</label>
-            
-            <div class="prob-box">
-              <div class="prob-item prob-1">1: ${prob1}</div>
-              <div class="prob-item prob-x">X: ${probX}</div>
-              <div class="prob-item prob-2">2: ${prob2}</div>
+          const card = document.createElement("div");
+          card.className = "match-card";
+          card.innerHTML = `
+            <div class="match-header">
+              <span>PARTIDO ${i+1}</span>
+              <span>⚽ ${p[1]} vs ${p[2]}</span>
             </div>
-
-            <div class="recomendacion">
-              <strong>💡 IA:</strong> ${textoPronostico}
+            <div class="match-body">
+              <div class="prob-box">
+                <div class="prob-item prob-1">1: ${formatPct(p[5])}</div>
+                <div class="prob-item prob-x">X: ${formatPct(p[6])}</div>
+                <div class="prob-item prob-2">2: ${formatPct(p[7])}</div>
+              </div>
+              <div class="recomendacion">💡 <b>Análisis:</b> ${p[8] || "Sin datos"}</div>
+              <label>Tu apuesta:</label>
+              <select name="p${i+1}" required>
+                <option value="">Elige 1, X o 2</option>
+                <option value="1">1 (Victoria Local)</option>
+                <option value="X">X (Empate)</option>
+                <option value="2">2 (Victoria Visitante)</option>
+              </select>
             </div>
-
-            <select name="p${i+1}" required>
-              <option value="">Elige tu pronóstico</option>
-              <option value="1">1</option>
-              <option value="X">X</option>
-              <option value="2">2</option>
-            </select>`;
-          divP.appendChild(div);
+          `;
+          divP.appendChild(card);
         });
 
-        // 3. NOMBRES
+        // Cargar nombres y Pleno 15 (Igual que antes)
         const selN = document.getElementById("nombre");
         selN.innerHTML = '<option value="">Selecciona tu nombre</option>';
-        const nombres = [...new Set(data.pronosticos.slice(1).map(f => f[0]))].filter(n => n);
-        nombres.forEach(n => {
-          const opt = document.createElement("option");
-          opt.value = n;
-          opt.textContent = (n === USUARIO_ESPECIAL) ? n + " ⭐ + Pleno 15" : n;
-          selN.appendChild(opt);
+        data.pronosticos.slice(1).forEach(f => {
+          if (f[0]) {
+            const opt = document.createElement("option");
+            opt.value = f[0];
+            opt.textContent = (f[0] === USUARIO_ESPECIAL) ? f[0] + " ⭐" : f[0];
+            selN.appendChild(opt);
+          }
         });
 
-        generarOpcionesPleno();
-      } catch (e) { console.error("Error cargando datos:", e); }
+        document.getElementById("labelP15").innerHTML = `<b>🔥 PLENO: ${data.datosPartido15.local} - ${data.datosPartido15.visitante}</b>`;
+        const p15 = document.getElementById("p15");
+        const scores = ["0","1","2","M"];
+        p15.innerHTML = '<option value="">Resultado exacto</option>';
+        scores.forEach(l => scores.forEach(v => {
+          let o = document.createElement("option"); o.value = l+"-"+v; o.textContent = l+" - "+v; p15.appendChild(o);
+        }));
+
+      } catch (e) { console.error(e); }
     }
 
     document.getElementById("nombre").addEventListener("change", function() {
-      const extra = document.getElementById("extra-match");
-      const p15 = document.getElementById("p15");
-      if (this.value !== "" && this.value === USUARIO_ESPECIAL) {
-        extra.style.display = "block";
-        p15.required = true;
-      } else {
-        extra.style.display = "none";
-        p15.required = false;
-        p15.value = "";
-      }
+      document.getElementById("extra-match").style.display = (this.value === USUARIO_ESPECIAL) ? "block" : "none";
     });
 
-    document.getElementById("quinielaForm").addEventListener("submit", async function(e) {
+    document.getElementById("quinielaForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
-      const data = { nombre: formData.get("nombre"), p15: formData.get("p15") || "" };
-      for (let i = 1; i <= 14; i++) { data["p" + i] = formData.get("p" + i); }
-
-      try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
-        });
-        const r = await res.json();
-        if (r.resultado === "ok") { alert("✅ Pronóstico enviado."); location.reload(); }
-      } catch (err) { alert("Error al enviar."); }
+      const payload = Object.fromEntries(formData.entries());
+      const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+      const r = await res.json();
+      if(r.resultado === "ok") { alert("✅ ¡Pronóstico guardado!"); location.reload(); }
     });
 
     inicializar();
