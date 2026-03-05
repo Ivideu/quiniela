@@ -9,12 +9,45 @@
     body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 0; display: flex; justify-content: center; min-height: 100vh; align-items: flex-start; }
     .container { max-width: 600px; width: 100%; background: #fff; margin: 40px 20px; padding: 30px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
     h1 { text-align: center; margin-bottom: 20px; color: #333; }
-    label { display: block; margin-top: 15px; font-weight: bold; color: #555; }
+    label { display: block; margin-top: 15px; font-weight: bold; color: #555; font-size: 1.1em; }
     select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
     button { margin-top: 25px; width: 100%; padding: 12px; font-size: 16px; background-color: #0077cc; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
     button:hover { background-color: #005fa3; }
-    .match { margin-top: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    .match { margin-top: 10px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
     #extra-match { display: none; margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 2px solid #ffecb5; border-radius: 8px; }
+    
+    /* --- ESTILOS PARA LA RECOMENDACIÓN (Columna I) --- */
+    .recomendacion {
+      margin-top: 8px;
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      background-color: #e8f4fd;
+      border-left: 4px solid #0077cc;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #333;
+    }
+    .recomendacion strong { color: #005fa3; }
+
+    /* --- ESTILOS PARA LOS PORCENTAJES (Columnas F, G, H) --- */
+    .prob-box {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+    .prob-item {
+      flex: 1;
+      text-align: center;
+      padding: 6px 2px;
+      border-radius: 4px;
+      color: white;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    .prob-1 { background-color: #28a745; } /* Verde para Victoria Local */
+    .prob-x { background-color: #ffc107; color: #333; } /* Amarillo para Empate */
+    .prob-2 { background-color: #dc3545; } /* Rojo para Victoria Visitante */
   </style>
 </head>
 <body>
@@ -41,7 +74,8 @@
   </div>
 
   <script>
-    const API_URL = "/api";
+    // ¡RECUERDA SUSTITUIR ESTO POR TU URL DE GOOGLE APPS SCRIPT!
+    const API_URL = "/api"; 
     let USUARIO_ESPECIAL = "";
 
     function generarOpcionesPleno() {
@@ -56,6 +90,13 @@
           select.appendChild(opt);
         });
       });
+    }
+
+    // Función para convertir los datos del Excel a porcentaje visual (ej. 0.38 -> 38%)
+    function formatearPorcentaje(valor) {
+      if (valor === undefined || valor === "") return "-";
+      if (typeof valor === 'number') return Math.round(valor * 100) + "%";
+      return valor; 
     }
 
     async function inicializar() {
@@ -76,10 +117,31 @@
         data.partidos.slice(1, 15).forEach((p, i) => {
           const div = document.createElement("div");
           div.className = "match";
-          // Usamos p[1] y p[2] para mostrar los nombres de los equipos del Excel
-          div.innerHTML = `<label>Partido ${i+1}: ${p[1]} vs ${p[2]}</label>
+          
+          // Capturamos las columnas
+          const prob1 = formatearPorcentaje(p[5]); // Columna F
+          const probX = formatearPorcentaje(p[6]); // Columna G
+          const prob2 = formatearPorcentaje(p[7]); // Columna H
+          const textoPronostico = p[8] ? p[8] : "Sin datos de análisis"; // Columna I
+
+          div.innerHTML = `
+            <label>Partido ${i+1}: ${p[1]} vs ${p[2]}</label>
+            
+            <div class="prob-box">
+              <div class="prob-item prob-1">1: ${prob1}</div>
+              <div class="prob-item prob-x">X: ${probX}</div>
+              <div class="prob-item prob-2">2: ${prob2}</div>
+            </div>
+
+            <div class="recomendacion">
+              <strong>💡 IA:</strong> ${textoPronostico}
+            </div>
+
             <select name="p${i+1}" required>
-              <option value="">Elige</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>
+              <option value="">Elige tu pronóstico</option>
+              <option value="1">1</option>
+              <option value="X">X</option>
+              <option value="2">2</option>
             </select>`;
           divP.appendChild(div);
         });
