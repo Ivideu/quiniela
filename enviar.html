@@ -8,7 +8,7 @@
     * { box-sizing: border-box; }
     body { 
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      background-color: #e9eff5; /* Fondo azul grisáceo muy claro */
+      background-color: #e9eff5; 
       margin: 0; 
       padding: 20px; 
       display: flex; 
@@ -29,36 +29,33 @@
       border-bottom: 4px solid #0056b3; 
       padding-bottom: 10px;
       text-transform: uppercase;
-      letter-spacing: 1px;
     }
     
-    /* TARJETA DE PARTIDO - AZUL FUERTE */
+    /* TARJETA DE PARTIDO */
     .match-card {
       margin-bottom: 30px;
-      border: 2px solid #004085; /* Borde azul oscuro */
+      border: 2px solid #004085; 
       border-radius: 12px;
       overflow: hidden;
       background-color: #fff;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
     }
 
     /* ENCABEZADO AZUL MARINO */
     .match-header {
-      background-color: #003366; /* Azul Marino */
+      background-color: #003366; 
       padding: 12px 18px;
       border-bottom: 2px solid #001a33;
       font-weight: bold;
       color: #ffffff; 
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      text-align: center;
+      font-size: 1.1em;
     }
 
     .match-body { padding: 20px; }
 
     label { display: block; margin-bottom: 8px; font-weight: bold; color: #003366; }
     
-    /* BLOQUES DE PROBABILIDAD (F, G, H del Excel) */
+    /* BLOQUES DE PROBABILIDAD (Columnas F, G, H) */
     .prob-box { display: flex; gap: 8px; margin-bottom: 15px; }
     .prob-item { 
       flex: 1; 
@@ -70,23 +67,21 @@
       font-weight: 900;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
     }
-    .prob-1 { background-color: #218838; } /* Verde Victoria Local */
-    .prob-x { background-color: #eab000; color: #000; } /* Amarillo Empate */
-    .prob-2 { background-color: #c82333; } /* Rojo Victoria Visitante */
+    .prob-1 { background-color: #218838; } 
+    .prob-x { background-color: #eab000; color: #000; } 
+    .prob-2 { background-color: #c82333; } 
 
-    /* ANÁLISIS IA (Columna I del Excel) */
+    /* ANÁLISIS IA (Columna I) */
     .recomendacion { 
-      background-color: #e3f2fd; /* Azul cielo muy claro */
+      background-color: #e3f2fd; 
       border-left: 6px solid #0056b3; 
       padding: 15px; 
       margin-bottom: 18px; 
       font-size: 14px; 
       color: #003366;
       border-radius: 4px;
-      line-height: 1.5;
     }
 
-    /* SELECTOR DE APUESTA */
     select { 
       width: 100%; 
       padding: 12px; 
@@ -94,12 +89,10 @@
       border-radius: 8px; 
       background-color: #f8fbff; 
       font-size: 16px;
-      color: #333;
-      cursor: pointer;
     }
     select:focus { border-color: #0056b3; outline: none; }
 
-    /* BOTÓN DE ENVÍO AZUL */
+    /* BOTÓN DE ENVÍO CON EFECTO HOVER */
     button { 
       width: 100%; 
       padding: 16px; 
@@ -111,12 +104,14 @@
       cursor: pointer; 
       font-size: 18px; 
       font-weight: bold; 
-      transition: background 0.3s, transform 0.2s;
+      transition: all 0.3s ease;
     }
-    button:hover { background: #003d80; transform: translateY(-2px); }
-    button:active { transform: translateY(0); }
+    button:hover { 
+      background: #003d80; 
+      box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
+      transform: translateY(-2px); 
+    }
 
-    /* PLENO AL 15 (Destacado en Oro/Amarillo) */
     #extra-match { 
       display: none; 
       background: #fffcf0; 
@@ -124,7 +119,6 @@
       margin-top: 25px; 
       border-radius: 12px; 
       border: 3px solid #ffd700; 
-      box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
     }
   </style>
 </head>
@@ -142,7 +136,7 @@
       <div id="partidos"></div>
 
       <div id="extra-match">
-        <label id="labelP15" style="color: #856404; font-size: 1.1em;">Cargando Pleno...</label>
+        <label id="labelP15" style="color: #856404; font-size: 1.1em;"></label>
         <select name="p15" id="p15" style="border-color: #ffeeba;"></select>
       </div>
 
@@ -151,8 +145,7 @@
   </div>
 
   <script>
-    // RECUERDA: Coloca aquí tu URL de Google Apps Script (la que termina en /exec)
-    const API_URL = "/api"; 
+    const API_URL = "/api";
     let USUARIO_ESPECIAL = "";
 
     function formatPct(val) {
@@ -170,33 +163,34 @@
         const divP = document.getElementById("partidos");
         divP.innerHTML = "";
         
-        // Generar partidos 1-14 utilizando los datos del Excel
         data.partidos.slice(1, 15).forEach((p, i) => {
           const card = document.createElement("div");
           card.className = "match-card";
           card.innerHTML = `
             <div class="match-header">
-              <span>PARTIDO ${i+1} — ⏰ ${p[4] || 'Horario pendiente'}</span>
-              <span>${p[1]} vs ${p[2]}</span>
+              PARTIDO ${i+1}: ${p[1]} vs ${p[2]}
             </div>
             <div class="match-body">
               <div class="prob-box">
-                <div class="prob-item prob-1">1: ${formatPct(p[5])}</div> <div class="prob-item prob-x">X: ${formatPct(p[6])}</div> <div class="prob-item prob-2">2: ${formatPct(p[7])}</div> </div>
+                <div class="prob-item prob-1">1: ${formatPct(p[5])}</div>
+                <div class="prob-item prob-x">X: ${formatPct(p[6])}</div>
+                <div class="prob-item prob-2">2: ${formatPct(p[7])}</div>
+              </div>
               <div class="recomendacion">
-                <b>🔍 Análisis:</b> ${p[8] || "Sin datos de análisis"} </div>
-              <label>Tu apuesta final:</label>
+                <b>🔍 Análisis IA:</b> ${p[8] || "Sin datos de análisis"}
+              </div>
+              <label>Tu apuesta:</label>
               <select name="p${i+1}" required>
-                <option value="">-- Elige un signo --</option>
-                <option value="1">1 (Victoria Local)</option>
+                <option value="">-- Seleccionar --</option>
+                <option value="1">1 (Local)</option>
                 <option value="X">X (Empate)</option>
-                <option value="2">2 (Victoria Visitante)</option>
+                <option value="2">2 (Visitante)</option>
               </select>
             </div>
           `;
           divP.appendChild(card);
         });
 
-        // Cargar nombres de usuarios
         const selN = document.getElementById("nombre");
         selN.innerHTML = '<option value="">Elige tu nombre</option>';
         data.pronosticos.slice(1).forEach(f => {
@@ -208,33 +202,29 @@
           }
         });
 
-        // Datos del Pleno al 15
         document.getElementById("labelP15").innerHTML = `<b>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</b>`;
         const p15 = document.getElementById("p15");
         const scores = ["0","1","2","M"];
-        p15.innerHTML = '<option value="">Resultado exacto del marcador</option>';
+        p15.innerHTML = '<option value="">Marcador exacto</option>';
         scores.forEach(l => scores.forEach(v => {
           let o = document.createElement("option"); o.value = l+"-"+v; o.textContent = l+" - "+v; p15.appendChild(o);
         }));
 
       } catch (e) { 
-        console.error("Error cargando datos:", e);
-        document.getElementById("nombre").innerHTML = '<option>Error de conexión</option>';
+        console.error(e);
+        document.getElementById("nombre").innerHTML = '<option>Error de carga</option>';
       }
     }
 
-    // Mostrar/Ocultar Pleno al 15 según el usuario
     document.getElementById("nombre").addEventListener("change", function() {
-      const extra = document.getElementById("extra-match");
-      extra.style.display = (this.value === USUARIO_ESPECIAL) ? "block" : "none";
+      document.getElementById("extra-match").style.display = (this.value === USUARIO_ESPECIAL) ? "block" : "none";
     });
 
-    // Enviar el formulario
     document.getElementById("quinielaForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = e.target.querySelector('button');
       btn.disabled = true;
-      btn.innerText = "Enviando pronóstico...";
+      btn.innerText = "Guardando...";
 
       const formData = new FormData(e.target);
       const payload = Object.fromEntries(formData.entries());
@@ -243,11 +233,11 @@
         const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
         const r = await res.json();
         if(r.resultado === "ok") { 
-          alert("✅ ¡Pronóstico guardado! Mucha suerte."); 
+          alert("✅ ¡Pronóstico enviado!"); 
           location.reload(); 
         }
       } catch (err) {
-        alert("❌ Error al enviar. Comprueba tu conexión.");
+        alert("❌ Error al enviar.");
         btn.disabled = false;
         btn.innerText = "🚀 Enviar Pronóstico";
       }
