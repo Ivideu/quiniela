@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tu Quiniela</title>
+  <title>Tu Quiniela + Admin</title>
   <style>
     * { box-sizing: border-box; }
     body { 
@@ -15,138 +15,171 @@
       justify-content: center; 
     }
     .container { 
-      max-width: 620px; 
+      max-width: 650px; 
       width: 100%; 
       background: #fff; 
-      padding: 30px; 
+      padding: 25px; 
       border-radius: 15px; 
       box-shadow: 0 10px 25px rgba(0, 51, 102, 0.1); 
     }
-    h1 { 
-      text-align: center; 
-      color: #003366; 
-      margin-bottom: 30px; 
-      border-bottom: 4px solid #0056b3; 
-      padding-bottom: 10px;
-      text-transform: uppercase;
+
+    /* PESTAÑAS DE NAVEGACIÓN */
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #b3d7ff;
     }
-    
-    /* TARJETA DE PARTIDO */
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      background: #e3f2fd;
+      border: none;
+      border-radius: 8px 8px 0 0;
+      font-weight: bold;
+      color: #003366;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: #0056b3;
+      color: white;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    h1, h2 { text-align: center; color: #003366; }
+
+    /* TARJETAS DE PARTIDO */
     .match-card {
-      margin-bottom: 30px;
+      margin-bottom: 20px;
       border: 2px solid #004085; 
-      border-radius: 12px;
+      border-radius: 10px;
       overflow: hidden;
       background-color: #fff;
     }
-
-    /* ENCABEZADO AZUL MARINO */
     .match-header {
       background-color: #003366; 
-      padding: 12px 18px;
-      border-bottom: 2px solid #001a33;
+      padding: 10px 15px;
       font-weight: bold;
       color: #ffffff; 
       text-align: center;
-      font-size: 1.1em;
     }
+    .match-body { padding: 15px; }
 
-    .match-body { padding: 20px; }
-
-    label { display: block; margin-bottom: 8px; font-weight: bold; color: #003366; }
-    
-    /* BLOQUES DE PROBABILIDAD (Columnas F, G, H) */
-    .prob-box { display: flex; gap: 8px; margin-bottom: 15px; }
+    /* BLOQUES DE PROBABILIDAD */
+    .prob-box { display: flex; gap: 8px; margin-bottom: 12px; }
     .prob-item { 
-      flex: 1; 
-      text-align: center; 
-      padding: 10px; 
-      border-radius: 8px; 
-      color: white; 
-      font-size: 14px; 
-      font-weight: 900;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+      flex: 1; text-align: center; padding: 8px; border-radius: 6px; 
+      color: white; font-size: 13px; font-weight: bold; 
     }
     .prob-1 { background-color: #218838; } 
     .prob-x { background-color: #eab000; color: #000; } 
     .prob-2 { background-color: #c82333; } 
 
-    /* ANÁLISIS IA (Columna I) */
     .recomendacion { 
       background-color: #e3f2fd; 
-      border-left: 6px solid #0056b3; 
-      padding: 15px; 
-      margin-bottom: 18px; 
-      font-size: 14px; 
-      color: #003366;
-      border-radius: 4px;
+      border-left: 5px solid #0056b3; 
+      padding: 10px; margin-bottom: 12px; font-size: 13px; color: #003366;
     }
 
-    select { 
-      width: 100%; 
-      padding: 12px; 
-      border: 2px solid #b3d7ff; 
-      border-radius: 8px; 
-      background-color: #f8fbff; 
-      font-size: 16px;
+    select, input { 
+      width: 100%; padding: 10px; border: 2px solid #b3d7ff; 
+      border-radius: 6px; font-size: 15px; margin-bottom: 10px;
     }
-    select:focus { border-color: #0056b3; outline: none; }
 
-    /* BOTÓN DE ENVÍO CON EFECTO HOVER */
     button { 
-      width: 100%; 
-      padding: 16px; 
-      background: #0056b3; 
-      color: white; 
-      border: none; 
-      border-radius: 10px; 
-      margin-top: 25px; 
-      cursor: pointer; 
-      font-size: 18px; 
-      font-weight: bold; 
-      transition: all 0.3s ease;
+      width: 100%; padding: 14px; background: #0056b3; color: white; 
+      border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold;
     }
-    button:hover { 
-      background: #003d80; 
-      box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
-      transform: translateY(-2px); 
-    }
+    button:hover { background: #003d80; }
 
-    #extra-match { 
-      display: none; 
-      background: #fffcf0; 
-      padding: 20px; 
-      margin-top: 25px; 
-      border-radius: 12px; 
-      border: 3px solid #ffd700; 
+    /* ESTILOS ESPECÍFICOS ADMIN */
+    .admin-box {
+      background: #f8fbff;
+      border: 2px dashed #0056b3;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 25px;
     }
+    .admin-match-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e3f2fd;
+    }
+    .admin-match-row select { width: 120px; margin-bottom: 0; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Tu Quiniela</h1>
-    <form id="quinielaForm">
-      <div style="margin-bottom: 30px;">
+    
+    <!-- Pestañas -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('quiniela')">📋 Quiniela</button>
+      <button class="tab-btn" onclick="switchTab('admin')">⚙️ Panel Admin</button>
+    </div>
+
+    <!-- SECCIÓN QUINIELA (USUARIOS) -->
+    <div id="tab-quiniela" class="tab-content active">
+      <h1>Tu Quiniela</h1>
+      <form id="quinielaForm">
         <label>👤 Selecciona tu nombre:</label>
         <select id="nombre" name="nombre" required>
           <option value="">Cargando nombres...</option>
         </select>
+
+        <div id="partidos"></div>
+
+        <div id="extra-match" style="display:none;">
+          <label id="labelP15"></label>
+          <select name="p15" id="p15"></select>
+        </div>
+
+        <button type="submit">🚀 Enviar Pronóstico</button>
+      </form>
+    </div>
+
+    <!-- SECCIÓN PANEL ADMIN -->
+    <div id="tab-admin" class="tab-content">
+      <h2>Gestión Administrativa</h2>
+      
+      <!-- Cambiar Usuario Estrella -->
+      <div class="admin-box">
+        <h3>⭐ Forzar Usuario Estrella</h3>
+        <label>Selecciona quién será el usuario especial esta jornada:</label>
+        <select id="admin-select-estrella"></select>
+        <button type="button" onclick="guardarUsuarioEstrella()">Guardar Usuario Estrella</button>
       </div>
 
-      <div id="partidos"></div>
-
-      <div id="extra-match">
-        <label id="labelP15" style="color: #856404; font-size: 1.1em;"></label>
-        <select name="p15" id="p15" style="border-color: #ffeeba;"></select>
+      <!-- Introducir Resultados -->
+      <div class="admin-box">
+        <h3>⚽ Actualizar Resultados Oficiales</h3>
+        <div id="admin-lista-partidos"></div>
+        <button type="button" onclick="guardarResultados()">💾 Publicar Resultados en Excel</button>
       </div>
+    </div>
 
-      <button type="submit">🚀 Enviar Pronóstico</button>
-    </form>
   </div>
 
   <script>
-    const API_URL = "/api";
-    let USUARIO_ESPECIAL = "";
+    const API_URL = "TU_URL_AQUI"; 
+    let globalData = null;
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      if(tab === 'quiniela') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('tab-quiniela').classList.add('active');
+      } else {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('tab-admin').classList.add('active');
+      }
+    }
 
     function formatPct(val) {
       if (!val || val === "-") return "0%";
@@ -157,91 +190,105 @@
     async function inicializar() {
       try {
         const res = await fetch(API_URL);
-        const data = await res.json();
-        USUARIO_ESPECIAL = data.usuarioEspecial;
+        globalData = await res.json();
 
+        // 1. Cargar Vista de Usuarios (Partidos)
         const divP = document.getElementById("partidos");
         divP.innerHTML = "";
         
-        data.partidos.slice(1, 15).forEach((p, i) => {
+        globalData.partidos.slice(1, 15).forEach((p, i) => {
           const card = document.createElement("div");
           card.className = "match-card";
           card.innerHTML = `
-            <div class="match-header">
-              PARTIDO ${i+1}: ${p[1]} vs ${p[2]}
-            </div>
+            <div class="match-header">PARTIDO ${i+1}: ${p[1]} vs ${p[2]}</div>
             <div class="match-body">
               <div class="prob-box">
                 <div class="prob-item prob-1">1: ${formatPct(p[5])}</div>
                 <div class="prob-item prob-x">X: ${formatPct(p[6])}</div>
                 <div class="prob-item prob-2">2: ${formatPct(p[7])}</div>
               </div>
-              <div class="recomendacion">
-                <b>🔍 Análisis IA:</b> ${p[8] || "Sin datos de análisis"}
-              </div>
+              <div class="recomendacion"><b>🔍 Análisis IA:</b> ${p[8] || "Sin datos"}</div>
               <label>Tu apuesta:</label>
               <select name="p${i+1}" required>
                 <option value="">-- Seleccionar --</option>
-                <option value="1">1</option>
-                <option value="X">X</option>
-                <option value="2">2</option>
+                <option value="1">1 (Local)</option>
+                <option value="X">X (Empate)</option>
+                <option value="2">2 (Visitante)</option>
               </select>
             </div>
           `;
           divP.appendChild(card);
         });
 
+        // 2. Cargar Selector de Usuarios
         const selN = document.getElementById("nombre");
+        const adminSelE = document.getElementById("admin-select-estrella");
         selN.innerHTML = '<option value="">Elige tu nombre</option>';
-        data.pronosticos.slice(1).forEach(f => {
+        adminSelE.innerHTML = '<option value="">Seleccionar...</option>';
+
+        globalData.pronosticos.slice(1).forEach(f => {
           if (f[0]) {
             const opt = document.createElement("option");
             opt.value = f[0];
-            opt.textContent = (f[0] === USUARIO_ESPECIAL) ? f[0] + " ⭐" : f[0];
+            opt.textContent = (f[0] === globalData.usuarioEspecial) ? f[0] + " ⭐" : f[0];
             selN.appendChild(opt);
+
+            const optAdmin = document.createElement("option");
+            optAdmin.value = f[0];
+            optAdmin.textContent = f[0];
+            if(f[0] === globalData.usuarioEspecial) optAdmin.selected = true;
+            adminSelE.appendChild(optAdmin);
           }
         });
 
-        document.getElementById("labelP15").innerHTML = `<b>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</b>`;
-        const p15 = document.getElementById("p15");
-        const scores = ["0","1","2","M"];
-        p15.innerHTML = '<option value="">Marcador exacto</option>';
-        scores.forEach(l => scores.forEach(v => {
-          let o = document.createElement("option"); o.value = l+"-"+v; o.textContent = l+" - "+v; p15.appendChild(o);
-        }));
+        // 3. Cargar Formulario Admin de Resultados
+        const divAdminP = document.getElementById("admin-lista-partidos");
+        divAdminP.innerHTML = "";
+        globalData.partidos.slice(1, 15).forEach((p, i) => {
+          const row = document.createElement("div");
+          row.className = "admin-match-row";
+          row.innerHTML = `
+            <span><b>P${i+1}:</b> ${p[1]} vs ${p[2]}</span>
+            <select class="admin-res-input" data-index="${i}">
+              <option value="">-</option>
+              <option value="1">1</option>
+              <option value="X">X</option>
+              <option value="2">2</option>
+            </select>
+          `;
+          divAdminP.appendChild(row);
+        });
 
-      } catch (e) { 
-        console.error(e);
-        document.getElementById("nombre").innerHTML = '<option>Error de carga</option>';
+      } catch (e) { console.error(e); }
+    }
+
+    // Guardar nuevo Usuario Estrella desde Admin
+    async function guardarUsuarioEstrella() {
+      const nuevoUser = document.getElementById("admin-select-estrella").value;
+      if(!nuevoUser) return alert("Selecciona un usuario válido.");
+
+      const payload = { action: "updateUsuarioEspecial", nuevoUsuario: nuevoUser };
+      const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+      const r = await res.json();
+      if(r.resultado === "ok") {
+        alert("⭐ Usuario Estrella actualizado con éxito.");
+        location.reload();
       }
     }
 
-    document.getElementById("nombre").addEventListener("change", function() {
-      document.getElementById("extra-match").style.display = (this.value === USUARIO_ESPECIAL) ? "block" : "none";
-    });
+    // Guardar Resultados Oficiales desde Admin
+    async function guardarResultados() {
+      const inputs = document.querySelectorAll(".admin-res-input");
+      const resultados = Array.from(inputs).map(inp => inp.value);
 
-    document.getElementById("quinielaForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const btn = e.target.querySelector('button');
-      btn.disabled = true;
-      btn.innerText = "Guardando...";
-
-      const formData = new FormData(e.target);
-      const payload = Object.fromEntries(formData.entries());
-      
-      try {
-        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
-        const r = await res.json();
-        if(r.resultado === "ok") { 
-          alert("✅ ¡Pronóstico enviado!"); 
-          location.reload(); 
-        }
-      } catch (err) {
-        alert("❌ Error al enviar.");
-        btn.disabled = false;
-        btn.innerText = "🚀 Enviar Pronóstico";
+      const payload = { action: "updateResultados", resultados: resultados };
+      const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+      const r = await res.json();
+      if(r.resultado === "ok") {
+        alert("⚽ Resultados actualizados en la hoja de Excel.");
+        location.reload();
       }
-    });
+    }
 
     inicializar();
   </script>
