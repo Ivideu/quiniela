@@ -328,21 +328,13 @@
       var actual = limpiaRes(p[3]);
       ["1", "X", "2"].forEach(function (v) {
         var c = nuevaCasilla(v, v === actual);
-c.onclick = function () {
-  var yaOn = c.classList.contains("on");
-  
-  // 1. Limpiamos todas las opciones del mismo partido
-  grp.querySelectorAll(".qa-cas").forEach(function(casilla) {
-    casilla.classList.remove("on");
-  });
-  
-  // 2. Marcamos la actual si no lo estaba (funciona como interruptor)
-  if (!yaOn) {
-    c.classList.add("on");
-  }
-  
-  actualizarContador();
-};
+        c.onclick = function () {
+          var yaOn = c.classList.contains("on");
+          // SOLUCIÓN APLICADA: Referencia al padre de la casilla clicada (c.parentElement) en lugar de usar grp
+          Array.prototype.forEach.call(c.parentElement.querySelectorAll(".qa-cas"), function (x) { x.classList.remove("on"); });
+          if (!yaOn) c.classList.add("on");      // tocar la marcada la quita
+          actualizarContador();
+        };
         grp.appendChild(c);
       });
 
