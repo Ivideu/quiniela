@@ -147,6 +147,7 @@
   <script>
     const API_URL = "/api";
     let USUARIO_ESPECIAL = "";
+    let DATOS = null;
 
     function formatPct(val) {
       if (!val || val === "-") return "0%";
@@ -154,10 +155,29 @@
       return val.toString().includes('%') ? val : val + "%";
     }
 
+    // Pinta la lista de nombres (con ⭐ en el usuario especial) y muestra/oculta el pleno al 15
+    function pintarNombres() {
+      const selN = document.getElementById("nombre");
+      const actual = selN.value;
+      selN.innerHTML = '<option value="">Elige tu nombre</option>';
+      DATOS.pronosticos.slice(1).forEach(f => {
+        if (f[0]) {
+          const opt = document.createElement("option");
+          opt.value = f[0];
+          opt.textContent = (f[0] === USUARIO_ESPECIAL) ? f[0] + " ⭐" : f[0];
+          selN.appendChild(opt);
+        }
+      });
+      selN.value = actual;
+      document.getElementById("extra-match").style.display =
+        (selN.value && selN.value === USUARIO_ESPECIAL) ? "block" : "none";
+    }
+
     async function inicializar() {
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
+        DATOS = data;
         USUARIO_ESPECIAL = data.usuarioEspecial;
 
         const divP = document.getElementById("partidos");
@@ -191,16 +211,7 @@
           divP.appendChild(card);
         });
 
-        const selN = document.getElementById("nombre");
-        selN.innerHTML = '<option value="">Elige tu nombre</option>';
-        data.pronosticos.slice(1).forEach(f => {
-          if (f[0]) {
-            const opt = document.createElement("option");
-            opt.value = f[0];
-            opt.textContent = (f[0] === USUARIO_ESPECIAL) ? f[0] + " ⭐" : f[0];
-            selN.appendChild(opt);
-          }
-        });
+        pintarNombres();
 
         document.getElementById("labelP15").innerHTML = `<b>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</b>`;
         const p15 = document.getElementById("p15");
@@ -218,6 +229,13 @@
 
     document.getElementById("nombre").addEventListener("change", function() {
       document.getElementById("extra-match").style.display = (this.value === USUARIO_ESPECIAL) ? "block" : "none";
+    });
+
+    // Cuando el menú admin rota el usuario especial, se repinta la ⭐ sin recargar
+    window.addEventListener("quiniela:especial", function(e) {
+      if (!DATOS) return;
+      USUARIO_ESPECIAL = e.detail.usuario;
+      pintarNombres();
     });
 
     document.getElementById("quinielaForm").addEventListener("submit", async (e) => {
@@ -245,5 +263,6 @@
 
     inicializar();
   </script>
+  <script src="admin.js"></script>
 </body>
 </html>
