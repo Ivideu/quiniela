@@ -35,11 +35,33 @@
     ".qa-msg{margin-top:10px;font-size:14px;text-align:center;min-height:18px;color:#555}",
     ".qa-msg.err{color:#c82333}.qa-msg.ok{color:#218838}",
     ".qa-especial{text-align:center;font-size:1.2em;font-weight:bold;background:#fffcf0;border:2px solid #ffd700;border-radius:10px;padding:12px;color:#003366}",
-    ".qa-row{display:grid;grid-template-columns:1fr 84px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #e3edf7;font-size:14px;color:#003366}",
-    ".qa-row small{display:block;color:#6c757d}",
-    ".qa-row select{padding:8px!important;font-size:15px!important}",
-    "#qa-pleno{margin-top:14px;padding:12px;background:#fffcf0;border:2px solid #ffd700;border-radius:10px}",
-    "#qa-pleno label{display:block;margin:0 0 8px;font-weight:bold;color:#856404;font-size:14px}",
+    /* Boleto de quiniela */
+    ".qa-boleto{background:#fff6f4;border:3px solid #d62839;border-radius:12px;overflow:hidden;color:#b01e2c}",
+    ".qa-bol-head{background:#d62839;color:#fff;padding:10px 12px;text-align:center}",
+    ".qa-bol-head b{display:block;font-size:1.25em;letter-spacing:3px}",
+    ".qa-bol-head span{display:block;font-size:11px;opacity:.95;margin-top:2px}",
+    ".qa-fila{display:grid;grid-template-columns:30px 1fr auto;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px dashed #f0b3ba}",
+    ".qa-fila:nth-child(even){background:#ffeceb}",
+    ".qa-num{width:26px;height:26px;border-radius:50%;border:2px solid #d62839;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;color:#d62839;background:#fff}",
+    ".qa-eq{font-size:13px;font-weight:bold;color:#7a1420;line-height:1.25;min-width:0}",
+    ".qa-eq small{font-weight:normal;color:#b45b64;font-size:11px}",
+    ".qa-eq .qa-vs{display:block;font-size:10px;color:#b45b64;font-weight:normal;letter-spacing:1px}",
+    ".qa-cas-grp{display:flex;gap:6px}",
+    "#qa-box button.qa-cas{width:42px;height:42px;margin:0;padding:0;border:2px solid #d62839;border-radius:6px;background:#fff;color:#d62839;font-size:18px;font-weight:bold;line-height:1}",
+    "#qa-box button.qa-cas:hover{background:#ffe1e3;border-color:#a8101f;color:#a8101f}",
+    "#qa-box button.qa-cas.on,#qa-box button.qa-cas.on:hover{background:#d62839;color:#fff;border-color:#a8101f}",
+    "#qa-pleno{margin:0;padding:10px 12px;background:#fffbe6;border-top:3px double #d62839}",
+    ".qa-pl-title{font-weight:bold;color:#856404;letter-spacing:2px;text-align:center}",
+    ".qa-pl-match{text-align:center;font-size:13px;font-weight:bold;color:#7a1420;margin:4px 0 8px}",
+    ".qa-pl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}",
+    ".qa-pl-eq{text-align:center}",
+    ".qa-pl-eq>div{font-size:11px;color:#7a1420;font-weight:bold;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+    ".qa-pl-eq .qa-cas-grp{justify-content:center}",
+    "#qa-box .qa-pl-eq button.qa-cas{width:38px;height:38px}",
+    ".qa-pl-res{text-align:center;margin-top:8px;font-weight:bold;color:#856404;font-size:14px;min-height:18px}",
+    ".qa-bol-foot{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#ffeceb;border-top:2px solid #d62839;font-size:13px;font-weight:bold}",
+    "#qa-box button.qa-link{width:auto;margin:0;padding:4px 8px;background:transparent;color:#d62839;text-decoration:underline;font-size:13px}",
+    "#qa-box button.qa-link:hover{background:#ffe1e3;color:#a8101f}",
     "h1[data-qa-trigger]{cursor:default;user-select:none;-webkit-user-select:none}",
     /* Capa de referencia */
     "#qa-cols{display:block}",
@@ -111,9 +133,18 @@
               '<div class="qa-especial" id="qa-especial">-</div>' +
               '<button type="button" class="qa-gold" id="qa-rotar">🎲 Rotar al azar</button>' +
               '<div class="qa-msg" id="qa-rotar-msg"></div>' +
-              '<h3>⚽ Resultados de la jornada</h3>' +
-              '<div id="qa-lista"></div>' +
-              '<div id="qa-pleno" style="display:none"><label id="qa-pleno-label"></label><select id="qa-pleno-sel"></select></div>' +
+              '<h3>🎟️ Boleto de resultados</h3>' +
+              '<div class="qa-boleto">' +
+                '<div class="qa-bol-head"><b>LA QUINIELA</b><span>1 gana local · X empate · 2 gana visitante</span></div>' +
+                '<div id="qa-lista"></div>' +
+                '<div id="qa-pleno" style="display:none">' +
+                  '<div class="qa-pl-title">🔥 PLENO AL 15</div>' +
+                  '<div class="qa-pl-match" id="qa-pleno-label"></div>' +
+                  '<div class="qa-pl-grid"><div class="qa-pl-eq" id="qa-pl-l"></div><div class="qa-pl-eq" id="qa-pl-v"></div></div>' +
+                  '<div class="qa-pl-res" id="qa-pl-res"></div>' +
+                '</div>' +
+                '<div class="qa-bol-foot"><span id="qa-contador">Marcados: 0/14</span><button type="button" class="qa-link" id="qa-borrar">Borrar todo</button></div>' +
+              '</div>' +
               '<button type="button" id="qa-guardar">💾 Guardar resultados</button>' +
               '<div class="qa-msg" id="qa-res-msg"></div>' +
             '</div>' +
@@ -231,6 +262,43 @@
     $("qa-especial").textContent = DATA.usuarioEspecial ? "⭐ " + DATA.usuarioEspecial : "Sin usuario especial";
   }
 
+  /* ---------- Boleto: casillas 1 X 2 y pleno al 15 ---------- */
+  var plL = "", plV = "";   // marcador del pleno al 15 (0, 1, 2, M o "")
+
+  // "RAYO VALLECANO (M) (15º)" -> nombre en grande y "(M) (15º)" en pequeño
+  function nombreEquipo(txt) {
+    var s = String(txt == null ? "" : txt);
+    var m = s.match(/^(.*?)\s*(\(.*)$/);
+    var cont = document.createElement("span");
+    cont.appendChild(document.createTextNode(m ? m[1] : s));
+    if (m && m[2]) { var sm = document.createElement("small"); sm.textContent = " " + m[2]; cont.appendChild(sm); }
+    return cont;
+  }
+
+  function nuevaCasilla(valor, activa) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "qa-cas" + (activa ? " on" : "");
+    b.setAttribute("data-v", valor);
+    b.textContent = valor;
+    return b;
+  }
+
+  function actualizarContador() {
+    var n = document.querySelectorAll("#qa-lista .qa-cas.on").length;
+    $("qa-contador").textContent = "Marcados: " + n + "/14";
+  }
+
+  function actualizarPleno() {
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-pl-l .qa-cas"), function (b) {
+      b.classList.toggle("on", b.getAttribute("data-v") === plL);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-pl-v .qa-cas"), function (b) {
+      b.classList.toggle("on", b.getAttribute("data-v") === plV);
+    });
+    $("qa-pl-res").textContent = (plL || plV) ? "Resultado: " + (plL || "?") + " - " + (plV || "?") : "";
+  }
+
   function pintarPartidos() {
     var lista = $("qa-lista");
     lista.innerHTML = "";
@@ -239,52 +307,82 @@
     for (var i = 1; i <= 14; i++) {
       var p = partidos[i];
       if (!p) continue;
-      var row = document.createElement("div");
-      row.className = "qa-row";
+      var fila = document.createElement("div");
+      fila.className = "qa-fila";
+      fila.setAttribute("data-idx", String(i - 1));
 
-      var info = document.createElement("span");
-      var b = document.createElement("b");
-      b.textContent = (p[0] || i) + ". ";
-      info.appendChild(b);
-      info.appendChild(document.createTextNode(p[1] + " vs " + p[2]));
-      if (p[4]) { var s = document.createElement("small"); s.textContent = p[4]; info.appendChild(s); }
+      var num = document.createElement("div");
+      num.className = "qa-num";
+      num.textContent = String(p[0] || i);
 
-      var sel = document.createElement("select");
-      sel.setAttribute("data-idx", String(i - 1));
-      ["", "1", "X", "2"].forEach(function (v) {
-        var o = document.createElement("option");
-        o.value = v; o.textContent = v === "" ? "—" : v;
-        sel.appendChild(o);
+      var eq = document.createElement("div");
+      eq.className = "qa-eq";
+      eq.appendChild(nombreEquipo(p[1]));
+      var vs = document.createElement("span");
+      vs.className = "qa-vs"; vs.textContent = "—  VS  —";
+      eq.appendChild(vs);
+      eq.appendChild(nombreEquipo(p[2]));
+
+      var grp = document.createElement("div");
+      grp.className = "qa-cas-grp";
+      var actual = limpiaRes(p[3]);
+      ["1", "X", "2"].forEach(function (v) {
+        var c = nuevaCasilla(v, v === actual);
+        c.onclick = function () {
+          var yaOn = c.classList.contains("on");
+          Array.prototype.forEach.call(grp.querySelectorAll(".qa-cas"), function (x) { x.classList.remove("on"); });
+          if (!yaOn) c.classList.add("on");      // tocar la marcada la quita
+          actualizarContador();
+        };
+        grp.appendChild(c);
       });
-      sel.value = limpiaRes(p[3]);
 
-      row.appendChild(info);
-      row.appendChild(sel);
-      lista.appendChild(row);
+      fila.appendChild(num);
+      fila.appendChild(eq);
+      fila.appendChild(grp);
+      lista.appendChild(fila);
     }
+    actualizarContador();
 
-    // Pleno al 15 (fila 16 del Sheet)
+    // Pleno al 15 (fila 16 del Sheet): una columna 0/1/2/M por cada equipo
     var p15 = partidos[15];
     var caja = $("qa-pleno");
     if (p15) {
       caja.style.display = "block";
-      $("qa-pleno-label").textContent = "🔥 Pleno al 15: " + p15[1] + " vs " + p15[2];
-      var s15 = $("qa-pleno-sel");
-      s15.innerHTML = "";
-      var vacio = document.createElement("option");
-      vacio.value = ""; vacio.textContent = "—";
-      s15.appendChild(vacio);
-      var marc = ["0", "1", "2", "M"];
-      marc.forEach(function (l) { marc.forEach(function (v) {
-        var o = document.createElement("option");
-        o.value = l + "-" + v; o.textContent = l + " - " + v;
-        s15.appendChild(o);
-      }); });
-      s15.value = limpiaPleno(p15[3]);
+      $("qa-pleno-label").textContent = p15[1] + " vs " + p15[2];
+      var marc = limpiaPleno(p15[3]).split("-");
+      plL = marc[0] || ""; plV = marc[1] || "";
+      [["qa-pl-l", p15[1], "L"], ["qa-pl-v", p15[2], "V"]].forEach(function (cfg) {
+        var cont = $(cfg[0]);
+        cont.innerHTML = "";
+        var tit = document.createElement("div");
+        tit.textContent = String(cfg[1]).replace(/\s*\(.*$/, "");
+        cont.appendChild(tit);
+        var g = document.createElement("div");
+        g.className = "qa-cas-grp";
+        ["0", "1", "2", "M"].forEach(function (v) {
+          var c = nuevaCasilla(v, false);
+          c.onclick = function () {
+            if (cfg[2] === "L") plL = (plL === v) ? "" : v; else plV = (plV === v) ? "" : v;
+            actualizarPleno();
+          };
+          g.appendChild(c);
+        });
+        cont.appendChild(g);
+      });
+      actualizarPleno();
     } else {
+      plL = ""; plV = "";
       caja.style.display = "none";
     }
   }
+
+  $("qa-borrar").onclick = function () {
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-lista .qa-cas.on"), function (b) { b.classList.remove("on"); });
+    plL = ""; plV = "";
+    actualizarPleno(); actualizarContador();
+    setMsg("qa-res-msg", "");
+  };
 
   /* ---------- Capa de referencia (web / imagen / captura pegada) ---------- */
   function lsGet() { try { return localStorage.getItem(LS_KEY) || ""; } catch (e) { return ""; } }
@@ -410,10 +508,15 @@
   $("qa-guardar").onclick = async function () {
     var resultados = [];
     for (var i = 0; i < 14; i++) resultados.push("");
-    Array.prototype.forEach.call(document.querySelectorAll("#qa-lista select"), function (s) {
-      resultados[parseInt(s.getAttribute("data-idx"), 10)] = s.value;
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-lista .qa-fila"), function (f) {
+      var on = f.querySelector(".qa-cas.on");
+      resultados[parseInt(f.getAttribute("data-idx"), 10)] = on ? on.getAttribute("data-v") : "";
     });
-    var p15 = $("qa-pleno").style.display !== "none" ? $("qa-pleno-sel").value : "";
+    var p15 = "";
+    if ($("qa-pleno").style.display !== "none") {
+      if (plL && plV) p15 = plL + "-" + plV;
+      else if (plL || plV) { setMsg("qa-res-msg", "En el pleno al 15 marca los dos equipos (o ninguno)", "err"); return; }
+    }
 
     var btn = $("qa-guardar");
     btn.disabled = true;
