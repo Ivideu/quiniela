@@ -84,7 +84,18 @@
     "#qa-visor img.qa-zoom{max-height:none;cursor:zoom-out}",
     ".qa-refbtns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}",
     "#qa-box .qa-refbtns button,#qa-box .qa-refbtns a{flex:1 1 auto;width:auto;margin:0;padding:8px 10px;font-size:13px;text-align:center;border-radius:8px;text-decoration:none;display:inline-block}",
-    "#qa-box .qa-refbtns a{background:#0056b3;color:#fff;font-weight:bold}"
+    "#qa-box .qa-refbtns a{background:#0056b3;color:#fff;font-weight:bold}",
+    /* Importar Excel */
+    ".qa-hint{font-size:13px;color:#555;margin:0 0 8px}",
+    "#qa-box textarea{width:100%;padding:10px;margin-top:8px;border:2px dashed #7fb4ea;border-radius:8px;font:12px monospace;background:#f8fbff;resize:vertical}",
+    "#qa-box input[type=file]{width:100%;padding:8px;border:2px solid #b3d7ff;border-radius:8px;background:#f8fbff;font-size:14px}",
+    ".qa-chk{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:13px;color:#333;font-weight:normal}",
+    ".qa-chk input{margin-top:3px}",
+    "#qa-imp-preview{margin-top:10px;overflow-x:auto;max-height:260px;overflow-y:auto}",
+    "#qa-imp-preview table{border-collapse:collapse;width:100%;font-size:12px}",
+    "#qa-imp-preview th,#qa-imp-preview td{border:1px solid #ccd9e8;padding:4px 6px;text-align:left;white-space:nowrap}",
+    "#qa-imp-preview th{background:#003366;color:#fff}",
+    ".qa-prem{display:grid;grid-template-columns:1fr 110px;gap:6px 10px;align-items:center;font-size:14px}"
   ].join("\n");
   var styleEl = document.createElement("style");
   styleEl.textContent = css;
@@ -148,6 +159,19 @@
               '</div>' +
               '<button type="button" id="qa-guardar">💾 Guardar resultados</button>' +
               '<div class="qa-msg" id="qa-res-msg"></div>' +
+              '<h3>📥 Importar jornada desde Excel</h3>' +
+              '<p class="qa-hint">Sube tu Excel (hoja «Partidos»; opcionalmente «Pronosticos» y «Global») o pega aquí las celdas A:J de Partidos copiadas de Excel.</p>' +
+              '<input type="file" id="qa-imp-file" accept=".xlsx,.xls,.csv" />' +
+              '<textarea id="qa-imp-text" rows="4" placeholder="…o pega aquí las celdas copiadas de Excel (con o sin la fila de cabecera)"></textarea>' +
+              '<label class="qa-chk"><input type="checkbox" id="qa-imp-vaciar" /> Nueva jornada: vaciar las apuestas de los jugadores (se mantienen los nombres)</label>' +
+              '<button type="button" class="qa-sec" id="qa-imp-prev">👁 Previsualizar</button>' +
+              '<div id="qa-imp-preview"></div>' +
+              '<button type="button" id="qa-imp-go">📥 Importar a la base de datos</button>' +
+              '<div class="qa-msg" id="qa-imp-msg"></div>' +
+              '<h3>💶 Premios del escrutinio (€)</h3>' +
+              '<div class="qa-prem" id="qa-premios"></div>' +
+              '<button type="button" id="qa-premios-go">Guardar premios</button>' +
+              '<div class="qa-msg" id="qa-premios-msg"></div>' +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -234,7 +258,7 @@
       else { ADMIN_PASS = ""; setMsg("qa-login-msg", "Contraseña incorrecta", "err"); }
     } catch (e) {
       ADMIN_PASS = "";
-      setMsg("qa-login-msg", "Error de conexión (¿publicaste la nueva versión del Apps Script?)", "err");
+      setMsg("qa-login-msg", "Error de conexión (¿está configurada ADMIN_PASS en Netlify?)", "err");
     }
     btn.disabled = false;
   };
@@ -245,13 +269,14 @@
     $("qa-login").style.display = "none";
     $("qa-panel").style.display = "block";
     $("qa-contenido").style.display = "none";
-    setMsg("qa-carga-msg", "Cargando datos del Sheet...");
+    setMsg("qa-carga-msg", "Cargando datos...");
     setMsg("qa-rotar-msg", ""); setMsg("qa-res-msg", "");
     try {
       DATA = await leerDatos();
       setMsg("qa-carga-msg", "");
       pintarEspecial();
       pintarPartidos();
+      pintarPremios();
       $("qa-contenido").style.display = "block";
       restaurarReferencia();
     } catch (e) {
@@ -530,13 +555,157 @@
     try {
       var r = await post({ action: "guardarResultados", resultados: resultados, p15: p15 });
       if (r.resultado === "ok") {
-        setMsg("qa-res-msg", "✅ Guardado en el Sheet (columna D) y datos refrescados", "ok");
+        setMsg("qa-res-msg", "✅ Resultados guardados", "ok");
       } else {
         setMsg("qa-res-msg", r.error || "Error", "err");
       }
     } catch (e) {
       setMsg("qa-res-msg", "Error de conexión", "err");
     }
+    btn.disabled = false;
+  };
+
+  /* ---------- Importar Excel / texto pegado ---------- */
+  var IMP = null;   // {partidos, pronosticos?, global?}
+
+  function cargarXLSX() {
+    return new Promise(function (ok, ko) {
+      if (window.XLSX) return ok();
+      var s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload = ok;
+      s.onerror = function () { ko(new Error("No se pudo cargar el lector de Excel")); };
+      document.head.appendChild(s);
+    });
+  }
+  function sinTildes(t) { return String(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
+  function filasHoja(wb, nombre) {
+    var n = wb.SheetNames.filter(function (x) { return sinTildes(x) === nombre; })[0];
+    return n ? XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }) : null;
+  }
+  function filasPartidos(filas) {
+    var out = [];
+    filas.forEach(function (r) {
+      var n = Number(String(r[0]).trim());
+      if (!isFinite(n) || n % 1 !== 0 || n < 1 || n > 15 || String(r[0]).trim() === "") return;
+      var f = r.slice(0, 10); while (f.length < 10) f.push("");
+      out[n] = f;
+    });
+    var res = [];
+    for (var i = 1; i <= 15; i++) {
+      if (!out[i]) throw new Error("Falta el partido con ID " + i + " (hacen falta los IDs 1 a 15)");
+      res.push(out[i]);
+    }
+    return res;
+  }
+  function filasPronosticos(filas) {
+    return filas.filter(function (r) { var n = String(r[0] == null ? "" : r[0]).trim(); return n && sinTildes(n) !== "nombre"; })
+      .map(function (r) { var f = r.slice(0, 16); while (f.length < 16) f.push(""); return f; });
+  }
+  function filasGlobal(filas) {
+    return filas.filter(function (r) { var n = String(r[0] == null ? "" : r[0]).trim(); return n && sinTildes(n) !== "nombre"; })
+      .map(function (r) { return [r[0], r[1]]; });
+  }
+
+  async function leerEntrada() {
+    var file = $("qa-imp-file").files && $("qa-imp-file").files[0];
+    var texto = $("qa-imp-text").value;
+    if (file) {
+      await cargarXLSX();
+      var buf = await file.arrayBuffer();
+      var wb = XLSX.read(buf, { type: "array" });
+      var out = {};
+      var hp = filasHoja(wb, "partidos");
+      if (!hp) {   // CSV o libro de una sola hoja: se toma la primera
+        hp = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: "" });
+      }
+      out.partidos = filasPartidos(hp);
+      var pr = filasHoja(wb, "pronosticos"); if (pr) out.pronosticos = filasPronosticos(pr);
+      var gl = filasHoja(wb, "global");      if (gl) out.global = filasGlobal(gl);
+      return out;
+    }
+    if (texto.trim()) {
+      var filas = texto.split(/\r?\n/).filter(function (l) { return l.trim(); }).map(function (l) { return l.split("\t"); });
+      return { partidos: filasPartidos(filas) };
+    }
+    throw new Error("Sube un archivo o pega las celdas de Excel");
+  }
+
+  function celda(tag, txt) { var e = document.createElement(tag); e.textContent = txt; return e; }
+  function pintarPreview(imp) {
+    var cont = $("qa-imp-preview");
+    cont.innerHTML = "";
+    var t = document.createElement("table");
+    var tr = document.createElement("tr");
+    ["ID", "Local", "Visitante", "Res.", "Hora", "1", "X", "2", "Análisis / Pronóstico"].forEach(function (h) { tr.appendChild(celda("th", h)); });
+    t.appendChild(tr);
+    imp.partidos.forEach(function (r) {
+      var row = document.createElement("tr");
+      [r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[9] || r[8]].forEach(function (v) { row.appendChild(celda("td", v == null ? "" : String(v))); });
+      t.appendChild(row);
+    });
+    cont.appendChild(t);
+  }
+  function resumenImp(imp) {
+    var t = "15 partidos";
+    if (imp.pronosticos) t += " · " + imp.pronosticos.length + " jugadores con sus apuestas";
+    if (imp.global) t += " · clasificación global (" + imp.global.length + ")";
+    return t;
+  }
+
+  $("qa-imp-prev").onclick = async function () {
+    setMsg("qa-imp-msg", "Leyendo...");
+    try {
+      IMP = await leerEntrada();
+      pintarPreview(IMP);
+      setMsg("qa-imp-msg", "Listo para importar: " + resumenImp(IMP), "ok");
+    } catch (e) { IMP = null; $("qa-imp-preview").innerHTML = ""; setMsg("qa-imp-msg", e.message, "err"); }
+  };
+
+  $("qa-imp-go").onclick = async function () {
+    var btn = $("qa-imp-go");
+    btn.disabled = true;
+    setMsg("qa-imp-msg", "Leyendo...");
+    try {
+      IMP = await leerEntrada();
+      pintarPreview(IMP);
+      var aviso = "Se van a sustituir los partidos" + (IMP.pronosticos ? ", las apuestas de los jugadores" : "") + (IMP.global ? " y la clasificación global" : "") +
+        ($("qa-imp-vaciar").checked && !IMP.pronosticos ? " y se vaciarán las apuestas" : "") + ". ¿Continuar?";
+      if (!confirm(aviso)) { setMsg("qa-imp-msg", "Cancelado"); btn.disabled = false; return; }
+      setMsg("qa-imp-msg", "Importando...");
+      var r = await post({ action: "importar", partidos: IMP.partidos, pronosticos: IMP.pronosticos, global: IMP.global, vaciar: $("qa-imp-vaciar").checked });
+      if (r.resultado === "ok") {
+        DATA = await leerDatos();
+        pintarEspecial(); pintarPartidos(); pintarPremios();
+        $("qa-imp-file").value = ""; $("qa-imp-text").value = "";
+        setMsg("qa-imp-msg", "✅ Importado: " + r.partidos + " partidos y " + r.jugadores + " jugadores. Recarga la página principal para verlo.", "ok");
+      } else setMsg("qa-imp-msg", r.error || "Error", "err");
+    } catch (e) { setMsg("qa-imp-msg", e.message || "Error", "err"); }
+    btn.disabled = false;
+  };
+
+  /* ---------- Premios ---------- */
+  function pintarPremios() {
+    var cont = $("qa-premios");
+    cont.innerHTML = "";
+    var esc = (DATA && DATA.escrutinio) || [];
+    for (var i = 1; i < esc.length; i++) {
+      var lab = document.createElement("div"); lab.textContent = esc[i][0] + " (" + esc[i][1] + ")";
+      var inp = document.createElement("input");
+      inp.type = "text"; inp.setAttribute("data-i", String(i - 1)); inp.value = esc[i][2] || 0;
+      cont.appendChild(lab); cont.appendChild(inp);
+    }
+  }
+  $("qa-premios-go").onclick = async function () {
+    var vals = [];
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-premios input"), function (i) { vals[parseInt(i.getAttribute("data-i"), 10)] = i.value; });
+    var btn = $("qa-premios-go");
+    btn.disabled = true;
+    setMsg("qa-premios-msg", "Guardando...");
+    try {
+      var r = await post({ action: "guardarPremios", premios: vals });
+      setMsg("qa-premios-msg", r.resultado === "ok" ? "✅ Premios guardados" : (r.error || "Error"), r.resultado === "ok" ? "ok" : "err");
+    } catch (e) { setMsg("qa-premios-msg", "Error de conexión", "err"); }
     btn.disabled = false;
   };
 })();
