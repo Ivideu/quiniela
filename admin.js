@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var API_URL = "/api";
+  var API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
   var ADMIN_PASS = "";   // solo en memoria; nunca se guarda
   var DATA = null;       // última copia de datos leída del Sheet
   var REF_DEFAULT = "https://www.flashscore.es/";   // web que se carga por defecto en la capa de referencia
