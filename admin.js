@@ -752,25 +752,39 @@
     }
   }
 
-  $("qa-premios-go").onclick = async function () {
-    var premios = [];
-    var acertantes = [];
+ $("qa-premios-go").onclick = async function () {
+    var filasEsc = [];
+    var inputsPremios = document.querySelectorAll("#qa-premios .qa-premios-input");
+    var inputsAcertantes = document.querySelectorAll("#qa-premios .qa-acertantes-input");
 
-    Array.prototype.forEach.call(document.querySelectorAll("#qa-premios .qa-premios-input"), function (i) { 
-      premios[parseInt(i.getAttribute("data-i"), 10)] = i.value; 
-    });
-
-    Array.prototype.forEach.call(document.querySelectorAll("#qa-premios .qa-acertantes-input"), function (i) { 
-      acertantes[parseInt(i.getAttribute("data-i"), 10)] = i.value; 
-    });
+    // Construimos las filas completas: [categoria, acertantes, premio]
+    for (var i = 0; i < inputsPremios.length; i++) {
+      var idx = i + 1; // La fila 0 en DATA.escrutinio es la cabecera
+      var cat = (DATA && DATA.escrutinio && DATA.escrutinio[idx]) ? DATA.escrutinio[idx][0] : "";
+      var ac = inputsAcertantes[i] ? inputsAcertantes[i].value : "0";
+      var pr = inputsPremios[i] ? inputsPremios[i].value : "0";
+      
+      filasEsc.push([cat, ac, pr]);
+    }
 
     var btn = $("qa-premios-go");
     btn.disabled = true;
     setMsg("qa-premios-msg", "Guardando...");
 
     try {
-      var r = await post({ action: "guardarPremios", premios: premios, acertantes: acertantes });
+      // Enviamos el array con la estructura completa de las filas o la acción correspondiente
+      var r = await post({ action: "guardarPremios", premios: filasEsc, escrutinio: filasEsc });
       setMsg("qa-premios-msg", r.resultado === "ok" ? "✅ Premios y acertantes guardados" : (r.error || "Error"), r.resultado === "ok" ? "ok" : "err");
+      
+      // Actualizamos los datos locales en memoria
+      if (r.resultado === "ok" && DATA && DATA.escrutinio) {
+        for (var j = 0; j < filasEsc.length; j++) {
+          if (DATA.escrutinio[j + 1]) {
+            DATA.escrutinio[j + 1][1] = filasEsc[j][1];
+            DATA.escrutinio[j + 1][2] = filasEsc[j][2];
+          }
+        }
+      }
     } catch (e) { 
       setMsg("qa-premios-msg", "Error de conexión", "err"); 
     }
