@@ -1,0 +1,15 @@
+# netlify.toml
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/api"
+  to = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec/:splat"
+  status = 200
+  force = true

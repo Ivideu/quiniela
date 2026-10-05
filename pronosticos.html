@@ -127,7 +127,8 @@
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
+    const API_URL = "/api";
+
     const norm = v => (v === null || v === undefined) ? "" : String(v).trim().toUpperCase();
     const normPleno = v => norm(v).replace(/\s/g, "");                 // "2 - 1" -> "2-1"
     const esResultado = v => v === "1" || v === "X" || v === "2";

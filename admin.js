@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
+  var API_URL = "/api";
   var ADMIN_PASS = "";   // solo en memoria; nunca se guarda
   var DATA = null;       // última copia de datos leída del Sheet
   var REF_DEFAULT = "https://www.flashscore.es/";   // web que se carga por defecto en la capa de referencia
@@ -36,7 +36,7 @@
     ".qa-msg{margin-top:10px;font-size:14px;text-align:center;min-height:18px;color:#555}",
     ".qa-msg.err{color:#c82333}.qa-msg.ok{color:#218838}",
     ".qa-especial{text-align:center;font-size:1.2em;font-weight:bold;background:#fffcf0;border:2px solid #ffd700;border-radius:10px;padding:12px;color:#003366}",
-    "/* Boleto de quiniela */",
+    /* Boleto de quiniela */
     ".qa-boleto{background:#fff6f4;border:3px solid #d62839;border-radius:12px;overflow:hidden;color:#b01e2c}",
     ".qa-bol-head{background:#d62839;color:#fff;padding:10px 12px;text-align:center}",
     ".qa-bol-head b{display:block;font-size:1.25em;letter-spacing:3px}",
@@ -64,7 +64,7 @@
     "#qa-box button.qa-link{width:auto;margin:0;padding:4px 8px;background:transparent;color:#d62839;text-decoration:underline;font-size:13px}",
     "#qa-box button.qa-link:hover{background:#ffe1e3;color:#a8101f}",
     "h1[data-qa-trigger]{cursor:default;user-select:none;-webkit-user-select:none}",
-    "/* Capa de referencia */",
+    /* Capa de referencia */
     "#qa-cols{display:block}",
     "@media (min-width:900px){#qa-box.qa-wide #qa-cols{display:grid;grid-template-columns:1.15fr 1fr;gap:22px;align-items:start}#qa-col-ref{position:sticky;top:8px}}",
     "#qa-col-ref{margin-bottom:18px}",

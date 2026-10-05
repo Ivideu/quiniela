@@ -25,42 +25,12 @@
     h1 { 
       text-align: center; 
       color: #003366; 
-      margin-bottom: 25px; 
+      margin-bottom: 30px; 
       border-bottom: 4px solid #0056b3; 
       padding-bottom: 10px;
       text-transform: uppercase;
     }
     
-    /* BOTÓN VOLVER CON EL MISMO ESTILO QUE ENVIAR PRONÓSTICO */
-    .btn-volver {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      padding: 14px 20px;
-      background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
-      color: #ffffff;
-      text-decoration: none;
-      border: none;
-      border-radius: 10px;
-      font-weight: bold;
-      font-size: 16px;
-      box-shadow: 0 4px 6px rgba(0, 86, 179, 0.25);
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-      box-sizing: border-box;
-      margin-bottom: 25px;
-    }
-    .btn-volver:hover {
-      background: linear-gradient(135deg, #004085 0%, #002752 100%);
-      box-shadow: 0 6px 12px rgba(0, 86, 179, 0.35);
-      transform: translateY(-2px);
-    }
-    .btn-volver:active {
-      transform: translateY(1px);
-    }
-
     /* TARJETA DE PARTIDO */
     .match-card {
       margin-bottom: 30px;
@@ -85,7 +55,7 @@
 
     label { display: block; margin-bottom: 8px; font-weight: bold; color: #003366; }
     
-    /* BLOQUES DE PROBABILIDAD */
+    /* BLOQUES DE PROBABILIDAD (Columnas F, G, H) */
     .prob-box { display: flex; gap: 8px; margin-bottom: 15px; }
     .prob-item { 
       flex: 1; 
@@ -101,7 +71,7 @@
     .prob-x { background-color: #eab000; color: #000; } 
     .prob-2 { background-color: #c82333; } 
 
-    /* ANÁLISIS IA */
+    /* ANÁLISIS IA (Columna I) */
     .recomendacion { 
       background-color: #e3f2fd; 
       border-left: 6px solid #0056b3; 
@@ -126,7 +96,7 @@
     button { 
       width: 100%; 
       padding: 16px; 
-      background: linear-gradient(135deg, #0056b3 0%, #004085 100%); 
+      background: #0056b3; 
       color: white; 
       border: none; 
       border-radius: 10px; 
@@ -134,16 +104,12 @@
       cursor: pointer; 
       font-size: 18px; 
       font-weight: bold; 
-      box-shadow: 0 4px 6px rgba(0, 86, 179, 0.25);
-      transition: all 0.2s ease-in-out;
+      transition: all 0.3s ease;
     }
     button:hover { 
-      background: linear-gradient(135deg, #004085 0%, #002752 100%); 
-      box-shadow: 0 6px 12px rgba(0, 86, 179, 0.35);
+      background: #003d80; 
+      box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
       transform: translateY(-2px); 
-    }
-    button:active {
-      transform: translateY(1px);
     }
 
     #extra-match { 
@@ -159,10 +125,6 @@
 <body>
   <div class="container">
     <h1>Tu Quiniela</h1>
-    
-    <!-- Botón para volver al menú principal -->
-    <a href="index.html" class="btn-volver">← Volver al menú</a>
-
     <form id="quinielaForm">
       <div style="margin-bottom: 30px;">
         <label>👤 Selecciona tu nombre:</label>
@@ -183,7 +145,7 @@
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzYJfUrgtEd80C_oeHivSLa6j1q0JfA6DLcQrpA1e3FIqnwiYsZyE0ETRJU487IFDgIWw/exec";
+    const API_URL = "/api";
     let USUARIO_ESPECIAL = "";
     let DATOS = null;
 
@@ -193,27 +155,19 @@
       return val.toString().includes('%') ? val : val + "%";
     }
 
-    // Pinta la lista de nombres desde la pestaña Clasificación o Pronósticos
+    // Pinta la lista de nombres (con ⭐ en el usuario especial) y muestra/oculta el pleno al 15
     function pintarNombres() {
       const selN = document.getElementById("nombre");
       const actual = selN.value;
       selN.innerHTML = '<option value="">Elige tu nombre</option>';
-      
-      const listaUsuarios = (DATOS.clasificacion && DATOS.clasificacion.length > 1) 
-        ? DATOS.clasificacion 
-        : DATOS.pronosticos;
-
-      if (listaUsuarios && listaUsuarios.length > 1) {
-        listaUsuarios.slice(1).forEach(f => {
-          if (f[0]) {
-            const opt = document.createElement("option");
-            opt.value = f[0];
-            opt.textContent = (f[0] === USUARIO_ESPECIAL) ? f[0] + " ⭐" : f[0];
-            selN.appendChild(opt);
-          }
-        });
-      }
-      
+      DATOS.pronosticos.slice(1).forEach(f => {
+        if (f[0]) {
+          const opt = document.createElement("option");
+          opt.value = f[0];
+          opt.textContent = (f[0] === USUARIO_ESPECIAL) ? f[0] + " ⭐" : f[0];
+          selN.appendChild(opt);
+        }
+      });
       selN.value = actual;
       document.getElementById("extra-match").style.display =
         (selN.value && selN.value === USUARIO_ESPECIAL) ? "block" : "none";
@@ -259,9 +213,7 @@
 
         pintarNombres();
 
-        if (data.datosPartido15) {
-          document.getElementById("labelP15").innerHTML = `<b>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</b>`;
-        }
+        document.getElementById("labelP15").innerHTML = `<b>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</b>`;
         const p15 = document.getElementById("p15");
         const scores = ["0","1","2","M"];
         p15.innerHTML = '<option value="">Marcador exacto</option>';
@@ -279,13 +231,13 @@
       document.getElementById("extra-match").style.display = (this.value === USUARIO_ESPECIAL) ? "block" : "none";
     });
 
+    // Cuando el menú admin rota el usuario especial, se repinta la ⭐ sin recargar
     window.addEventListener("quiniela:especial", function(e) {
       if (!DATOS) return;
       USUARIO_ESPECIAL = e.detail.usuario;
       pintarNombres();
     });
 
-    // Envío del formulario rápido para evitar timeouts
     document.getElementById("quinielaForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = e.target.querySelector('button');
@@ -296,22 +248,14 @@
       const payload = Object.fromEntries(formData.entries());
       
       try {
-        const res = await fetch(API_URL, { 
-          method: "POST", 
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload) 
-        });
-        
+        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
         const r = await res.json();
-        if (r.resultado === "ok") { 
-          alert("✅ ¡Pronóstico enviado correctamente!"); 
+        if(r.resultado === "ok") { 
+          alert("✅ ¡Pronóstico enviado!"); 
           location.reload(); 
-        } else {
-          throw new Error(r.detalle || "Error al procesar la respuesta.");
         }
       } catch (err) {
-        console.error(err);
-        alert("Ojo, comprueba que se ha registrador tu apuesta");
+        alert("❌ Error al enviar.");
         btn.disabled = false;
         btn.innerText = "🚀 Enviar Pronóstico";
       }
