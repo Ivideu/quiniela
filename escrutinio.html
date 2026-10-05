@@ -98,7 +98,7 @@
     .hero p { margin: 0; font-size: 14px; opacity: .92; }
 
     /* Resumen */
-    .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .summary { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
     .summary div {
       background: rgba(255,255,255,.18);
       backdrop-filter: blur(4px);
@@ -146,9 +146,7 @@
     }
     .badge small { display: block; font-size: 9px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; opacity: .8; margin-top: 2px; }
 
-    .info b { display: block; font-size: 16px; }
-    .info span { font-size: 13px; color: var(--muted); }
-    .bar { height: 5px; border-radius: 4px; background: var(--line); margin-top: 8px; overflow: hidden; }
+    .bar { height: 5px; border-radius: 4px; background: var(--line); overflow: hidden; }
     .bar i {
       display: block; height: 100%; width: 0;
       border-radius: 4px;
@@ -211,8 +209,7 @@
       <h1>Escrutinio de Premios</h1>
       <p id="subtitulo">Cargando el reparto…</p>
       <div class="summary">
-        <div><strong id="totalPremios">–</strong><small>Total repartido</small></div>
-        <div><strong id="totalAcertantes">–</strong><small>Acertantes</small></div>
+        <div><strong id="totalPremios">–</strong><small>Total en premios</small></div>
       </div>
     </header>
 
@@ -285,21 +282,19 @@
           lista.innerHTML = '<div class="msg">Todavía no hay escrutinio disponible ⏳</div>';
           document.getElementById("subtitulo").textContent = "Vuelve en cuanto se publique";
           document.getElementById("totalPremios").textContent = "–";
-          document.getElementById("totalAcertantes").textContent = "–";
           return;
         }
 
         lista.innerHTML = "";
         const maxPremio = Math.max.apply(null, filas.map(function (f) { return f.premio; })) || 1;
-        const totalRep = filas.reduce(function (s, f) { return s + f.premio * f.acertantes; }, 0);
-        const totalAc = filas.reduce(function (s, f) { return s + f.acertantes; }, 0);
+        const totalRep = filas.reduce(function (s, f) { return s + f.premio; }, 0);
 
         // Secuencia predefinida para los aciertos de la Quiniela (15, 14, 13, 12, 11, 10)
         const aciertosOrdenados = [15, 14, 13, 12, 11, 10];
 
         filas.forEach(function (f, i) {
           const esTop = f.premio === maxPremio && f.premio > 0;
-          const desierto = f.acertantes === 0;
+          const desierto = f.premio === 0;
 
           // Extrae el número de aciertos (entre paréntesis o por la posición de la fila)
           const matchParentesis = String(f.aciertos).match(/\((\d+)\)/);
@@ -310,9 +305,7 @@
           row.style.animationDelay = (i * 0.07) + "s";
           row.innerHTML =
             '<div class="badge"><div>' + numAciertos + '<small>aciertos</small></div></div>' +
-            '<div class="info"><b>' + f.acertantes + (f.acertantes === 1 ? ' acertante' : ' acertantes') + '</b>' +
-            '<span>' + (desierto ? 'Premio desierto' : (esTop ? '🏆 Premio mayor' : 'Premio por acertante')) + '</span>' +
-            '<div class="bar"><i></i></div></div>' +
+            '<div class="info"><div class="bar"><i></i></div></div>' +
             '<div class="prize' + (f.premio === 0 ? ' zero' : '') + '"></div>';
           lista.appendChild(row);
           if (desierto) setTimeout(function () { row.classList.add("in"); }, i * 70 + 560);
@@ -332,7 +325,6 @@
 
         document.getElementById("subtitulo").textContent = filas.length + " categorías de premio";
         contar(document.getElementById("totalPremios"), totalRep, function (v) { return fmt(v) + " €"; });
-        contar(document.getElementById("totalAcertantes"), totalAc, function (v) { return Math.round(v); });
       } catch (error) {
         console.error("Error cargando el escrutinio:", error);
         mostrarError();
