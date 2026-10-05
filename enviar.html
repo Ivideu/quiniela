@@ -125,6 +125,7 @@
 <body>
   <div class="container">
     <h1>Tu Quiniela</h1>
+    <button type="button" id="btnVolver" style="margin-top:0; margin-bottom:30px;">⬅ Volver</button>
     <form id="quinielaForm">
       <div style="margin-bottom: 30px;">
         <label>👤 Selecciona tu nombre:</label>
@@ -260,6 +261,8 @@
         btn.innerText = "🚀 Enviar Pronóstico";
       }
     });
+
+    document.getElementById("btnVolver").addEventListener("click", function() { location.href = "index.html"; });
 
     inicializar();
   </script>

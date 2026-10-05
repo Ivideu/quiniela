@@ -120,7 +120,7 @@ function normPronosticos(rows) {
 }
 function normGlobal(rows) {
   if (!Array.isArray(rows) || rows.length > 500) throw new Error("Datos globales no válidos");
-  return [HEAD_GLOBAL, ...rows.filter(r => r && str(r[0])).map(r => [str(r[0]), Number(r[1]) || 0])];
+  return [HEAD_GLOBAL, ...rows.filter(r => r && str(r[0])).map(r => [str(r[0]), Math.max(0, Math.floor(Number(r[1]) || 0))])];
 }
 
 /* ---------- Admin ---------- */
@@ -172,6 +172,11 @@ async function admin(data) {
       } catch (e) { return json({ resultado: "error", error: e.message }); }
       await guardar(d);
       return json({ resultado: "ok", partidos: d.partidos.length - 1, jugadores: d.pronosticos.length - 1 });
+    }
+    case "guardarGlobal": {
+      try { d.global = normGlobal(data.global); } catch (e) { return json({ resultado: "error", error: e.message }); }
+      await guardar(d);
+      return json({ resultado: "ok" });
     }
     case "guardarPremios": {
       const p = Array.isArray(data.premios) ? data.premios.slice(0, 6).map(v => Math.max(0, Number(String(v).replace(",", ".")) || 0)) : [];

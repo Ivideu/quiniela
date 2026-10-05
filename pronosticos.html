@@ -53,6 +53,7 @@
     .eq { flex: 1; min-width: 0; line-height: 1.25; font-size: 13px; font-weight: 600; color: #003366; }
     .eq span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .eq .vs { font-size: 10px; font-weight: normal; color: #7a97b8; letter-spacing: 1px; }
+    .hora { flex: none; max-width: 56px; text-align: center; font-size: 10px; line-height: 1.2; color: #7a97b8; font-weight: 600; }
 
     /* Lo que ha salido (primera columna) */
     .salio { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 6px; border-radius: 8px; background: #003366; color: #fff; font-weight: 800; font-size: 17px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.35); }
@@ -91,7 +92,7 @@
 
     @media (max-width: 640px) {
       body { padding: 8px; } .container { padding: 14px; border-radius: 10px; }
-      td.partido { min-width: 148px; max-width: 148px; padding: 6px 6px; } .pt { gap: 5px; } .eq { font-size: 11px; } .eq .vs { display: none; }
+      td.partido { min-width: 176px; max-width: 176px; padding: 6px 6px; } .hora { font-size: 9px; max-width: 42px; } .pt { gap: 5px; } .eq { font-size: 11px; } .eq .vs { display: none; }
       .num { width: 20px; height: 20px; font-size: 10px; border-width: 1.5px; }
       .signo { width: 30px; height: 30px; font-size: 15px; } .salio { min-width: 28px; height: 28px; font-size: 14px; padding: 0 4px; } .salio.pleno { font-size: 11px; padding: 0 5px; }
       thead th.partido { font-size: 10px; padding-left: 8px; } thead th.jug { min-width: 70px; } .pts b { font-size: 19px; }
@@ -165,7 +166,7 @@
     }
 
     // Primera columna: número, equipos y lo que ha salido
-    function celdaPartido(num, local, visitante, salio, esPlenoFila) {
+    function celdaPartido(num, local, visitante, salio, esPlenoFila, hora) {
       const td = el("td", "partido");
       const pt = el("div", "pt");
       pt.appendChild(el("div", "num", String(num)));
@@ -175,6 +176,7 @@
       eq.appendChild(el("span", "", visitante));
       eq.title = local + " – " + visitante;
       pt.appendChild(eq);
+      pt.appendChild(el("div", "hora", hora || ""));
       const s = el("div", "salio" + (esPlenoFila ? " pleno" : "") + (salio ? "" : " nada"), salio || "…");
       s.title = salio ? "Ha salido " + salio : "Todavía sin resultado";
       pt.appendChild(s);
@@ -269,7 +271,7 @@
           const local = p ? equipo(p[1]) : "Partido " + i;
           const visitante = p ? equipo(p[2]) : "";
           const tr = el("tr", esPlenoFila ? "pleno" : "");
-          tr.appendChild(celdaPartido(i, local, visitante, esPlenoFila ? salio15 : salio[i], esPlenoFila));
+          tr.appendChild(celdaPartido(i, local, visitante, esPlenoFila ? salio15 : salio[i], esPlenoFila, p && p[4] != null ? String(p[4]).trim() : ""));
           jugadores.forEach((j, idx) => {
             const td = celdaApuesta(j.ap[i], esPlenoFila ? salio15 : salio[i], esPlenoFila);
             td.setAttribute("data-j", String(idx));

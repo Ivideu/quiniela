@@ -95,6 +95,9 @@
     "#qa-imp-preview table{border-collapse:collapse;width:100%;font-size:12px}",
     "#qa-imp-preview th,#qa-imp-preview td{border:1px solid #ccd9e8;padding:4px 6px;text-align:left;white-space:nowrap}",
     "#qa-imp-preview th{background:#003366;color:#fff}",
+    ".qa-gl{display:grid;grid-template-columns:1fr auto 64px auto;gap:6px;align-items:center;margin-bottom:6px;font-size:14px}",
+    "#qa-box button.qa-mas{width:38px;height:38px;margin:0;padding:0;font-size:20px;line-height:1}",
+    "#qa-box .qa-gl input[type=text]{text-align:center;padding:8px 4px}",
     ".qa-prem{display:grid;grid-template-columns:1fr 110px;gap:6px 10px;align-items:center;font-size:14px}"
   ].join("\n");
   var styleEl = document.createElement("style");
@@ -168,6 +171,11 @@
               '<div id="qa-imp-preview"></div>' +
               '<button type="button" id="qa-imp-go">📥 Importar a la base de datos</button>' +
               '<div class="qa-msg" id="qa-imp-msg"></div>' +
+              '<h3>🏆 Victorias totales (clasificación general)</h3>' +
+              '<p class="qa-hint">Suma una victoria al ganador de la quiniela con «+» y guarda.</p>' +
+              '<div id="qa-glob"></div>' +
+              '<button type="button" id="qa-glob-go">Guardar victorias</button>' +
+              '<div class="qa-msg" id="qa-glob-msg"></div>' +
               '<h3>💶 Premios del escrutinio (€)</h3>' +
               '<div class="qa-prem" id="qa-premios"></div>' +
               '<button type="button" id="qa-premios-go">Guardar premios</button>' +
@@ -276,7 +284,7 @@
       setMsg("qa-carga-msg", "");
       pintarEspecial();
       pintarPartidos();
-      pintarPremios();
+      pintarPremios(); pintarGlobal();
       $("qa-contenido").style.display = "block";
       restaurarReferencia();
     } catch (e) {
@@ -676,7 +684,7 @@
       var r = await post({ action: "importar", partidos: IMP.partidos, pronosticos: IMP.pronosticos, global: IMP.global, vaciar: $("qa-imp-vaciar").checked });
       if (r.resultado === "ok") {
         DATA = await leerDatos();
-        pintarEspecial(); pintarPartidos(); pintarPremios();
+        pintarEspecial(); pintarPartidos(); pintarPremios(); pintarGlobal();
         $("qa-imp-file").value = ""; $("qa-imp-text").value = "";
         setMsg("qa-imp-msg", "✅ Importado: " + r.partidos + " partidos y " + r.jugadores + " jugadores. Recarga la página principal para verlo.", "ok");
       } else setMsg("qa-imp-msg", r.error || "Error", "err");
@@ -706,6 +714,39 @@
       var r = await post({ action: "guardarPremios", premios: vals });
       setMsg("qa-premios-msg", r.resultado === "ok" ? "✅ Premios guardados" : (r.error || "Error"), r.resultado === "ok" ? "ok" : "err");
     } catch (e) { setMsg("qa-premios-msg", "Error de conexión", "err"); }
+    btn.disabled = false;
+  };
+
+  /* ---------- Victorias totales (global.html) ---------- */
+  function pintarGlobal() {
+    var cont = $("qa-glob");
+    cont.innerHTML = "";
+    var mapa = {}, orden = [];
+    function add(n, v) { n = String(n == null ? "" : n).trim(); if (n && !(n in mapa)) { mapa[n] = v; orden.push(n); } }
+    ((DATA && DATA.global) || []).slice(1).forEach(function (f) { add(f[0], Math.max(0, Math.floor(Number(f[1]) || 0))); });
+    ((DATA && DATA.pronosticos) || []).slice(1).forEach(function (f) { add(f[0], 0); });
+    orden.forEach(function (n) {
+      var fila = document.createElement("div"); fila.className = "qa-gl";
+      var lab = document.createElement("div"); lab.textContent = n;
+      var inp = document.createElement("input"); inp.type = "text"; inp.setAttribute("inputmode", "numeric"); inp.value = mapa[n]; inp.setAttribute("data-n", n);
+      function cambia(delta) { inp.value = Math.max(0, (parseInt(inp.value, 10) || 0) + delta); }
+      var menos = document.createElement("button"); menos.type = "button"; menos.className = "qa-mas qa-sec"; menos.textContent = "−"; menos.onclick = function () { cambia(-1); };
+      var mas = document.createElement("button"); mas.type = "button"; mas.className = "qa-mas"; mas.textContent = "+"; mas.onclick = function () { cambia(1); };
+      fila.appendChild(lab); fila.appendChild(menos); fila.appendChild(inp); fila.appendChild(mas);
+      cont.appendChild(fila);
+    });
+  }
+  $("qa-glob-go").onclick = async function () {
+    var filas = [["Nombre", "Aciertos"]];
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-glob input"), function (i) { filas.push([i.getAttribute("data-n"), Math.max(0, parseInt(i.value, 10) || 0)]); });
+    var btn = $("qa-glob-go");
+    btn.disabled = true;
+    setMsg("qa-glob-msg", "Guardando...");
+    try {
+      var r = await post({ action: "guardarGlobal", global: filas });
+      if (r.resultado === "ok") { DATA.global = filas; setMsg("qa-glob-msg", "✅ Victorias guardadas", "ok"); }
+      else setMsg("qa-glob-msg", r.error || "Error", "err");
+    } catch (e) { setMsg("qa-glob-msg", "Error de conexión", "err"); }
     btn.disabled = false;
   };
 })();

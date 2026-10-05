@@ -3,122 +3,164 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clasificación</title>
+  <title>Clasificación general</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background-color: #e9eff5; margin: 0; padding: 0; display: flex; justify-content: center; min-height: 100vh; align-items: flex-start; }
+    .container { max-width: 620px; width: 100%; background: #fff; margin: 40px 20px; padding: 30px 24px; border-radius: 14px; box-shadow: 0 6px 22px rgba(0,51,102,0.12); }
+    h1 { text-align: center; margin: 0; color: #003366; text-transform: uppercase; letter-spacing: 1px; font-size: 1.6em; }
+    .sub { text-align: center; color: #5b7fa6; font-size: 14px; margin: 6px 0 0; }
+    .barra { height: 5px; border-radius: 3px; margin: 14px auto 0; max-width: 220px; background: linear-gradient(90deg, #d4a800 0 33%, #9aa9bb 33% 66%, #b87333 66% 100%); }
 
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6f8;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      align-items: flex-start;
-    }
+    /* ---------- Podio ---------- */
+    .podio { display: flex; justify-content: center; align-items: flex-end; gap: 8px; margin: 34px 0 6px; }
+    .col { flex: 1; max-width: 175px; min-width: 0; text-align: center; }
+    .corona { font-size: 26px; line-height: 1; height: 28px; }
+    .avatar { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; color: #fff; text-transform: uppercase; border: 3px solid; }
+    .nombre { font-weight: 700; color: #003366; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+    .vict { font-size: 12px; color: #5b7fa6; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+    .vict b { display: block; font-size: 26px; line-height: 1.1; color: #003366; letter-spacing: 0; }
+    .bloque { border-radius: 12px 12px 0 0; display: flex; flex-direction: column; align-items: center; padding-top: 10px; color: #fff; font-weight: 800; box-shadow: inset 0 -5px 0 rgba(0,0,0,.18); }
+    .bloque .medalla { font-size: 30px; line-height: 1; }
+    .bloque .pos { font-size: 22px; margin-top: 2px; text-shadow: 1px 1px 2px rgba(0,0,0,.3); }
+    .r1 .avatar { width: 68px; height: 68px; font-size: 27px; background: #d4a800; border-color: #ffd700; }
+    .r2 .avatar { background: #7f8fa3; border-color: #c4cfdc; }
+    .r3 .avatar { background: #a8683a; border-color: #e0a470; }
+    .r1 .bloque { height: 140px; background: linear-gradient(#ffd700, #c99a00); }
+    .r2 .bloque { height: 108px; background: linear-gradient(#cfd8e3, #8e9db0); }
+    .r3 .bloque { height: 84px;  background: linear-gradient(#e0a470, #a8683a); }
+    .base { height: 8px; background: #003366; border-radius: 0 0 8px 8px; margin-bottom: 26px; }
 
-    .container {
-      max-width: 600px;
-      width: 100%;
-      background: #fff;
-      margin: 40px 20px;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
+    .aviso { text-align: center; margin: 22px auto; padding: 12px 14px; border-radius: 8px; background: #fff3cd; border: 1px solid #ffe08a; color: #7a5b00; font-weight: bold; font-size: 15px; }
 
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #333;
-    }
+    /* ---------- Resto de jugadores ---------- */
+    .fila { display: grid; grid-template-columns: 34px 1fr minmax(60px, 120px) 58px; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 10px; }
+    .fila:nth-child(odd) { background: #f2f8ff; }
+    .rango { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #0077cc; color: #0077cc; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; background: #fff; }
+    .fila .n { font-weight: 600; color: #003366; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pista { height: 10px; background: #dbe7f4; border-radius: 6px; overflow: hidden; }
+    .pista i { display: block; height: 100%; background: linear-gradient(90deg, #0077cc, #4aa3e8); border-radius: 6px; }
+    .fila .v { text-align: right; font-weight: 800; color: #003366; white-space: nowrap; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
+    .msg { text-align: center; padding: 30px; color: #555; }
+    .back-link { display: inline-block; margin-top: 24px; text-decoration: none; background: #0077cc; color: white !important; padding: 10px 15px; border-radius: 6px; text-align: center; }
+    .back-link:hover { background: #005fa3; }
+    .pie { text-align: center; }
 
-    th, td {
-      padding: 12px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-
-    th {
-      background-color: #0077cc;
-      color: white;
-    }
-
-    tr:nth-child(even) {
-      background-color: #f2f2f2;
-    }
-
-    .back-link {
-      display: block;
-      text-align: center;
-      margin-top: 20px;
-      color: #0077cc;
-      text-decoration: none;
-    }
-
-    .back-link:hover {
-      text-decoration: underline;
-    }
-            a {
-      display: inline-block;
-      margin-top: 20px;
-      text-decoration: none;
-      background: #0077cc;
-      color: white !important;
-      padding: 10px 15px;
-      border-radius: 6px;
-      text-align: center;
+    @media (max-width: 440px) {
+      .container { margin: 16px 10px; padding: 22px 12px; }
+      .avatar { width: 46px; height: 46px; font-size: 18px; } .r1 .avatar { width: 56px; height: 56px; font-size: 22px; }
+      .nombre { font-size: 13px; } .vict b { font-size: 22px; }
+      .fila { grid-template-columns: 30px 1fr 50px; } .pista { display: none; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Quinielas ganadas totales</h1>
-    <table>
-      <thead>
-        <tr>
-          <th>Jugador</th>
-          <th>Ganados</th>
-        </tr>
-      </thead>
-      <tbody id="tablaGlobal"></tbody>
-    </table>
+    <h1>🏆 Clasificación general</h1>
+    <p class="sub" id="sub">Cargando...</p>
+    <div class="barra"></div>
 
-    <a class="back-link" href="index.html">← Volver a inicio</a>
+    <div id="aviso" class="aviso" style="display:none"></div>
+    <div id="podio" class="podio"></div>
+    <div id="resto"></div>
+
+    <div class="pie"><a class="back-link" href="index.html">← Volver a inicio</a></div>
   </div>
 
 <script>
   const API_URL = "/api";
 
-  async function cargarGlobal() {
+  function el(tag, cls, txt) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+  const plural = n => n === 1 ? "victoria" : "victorias";
+
+  async function cargar() {
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(API_URL, { cache: "no-store" });
       const data = await res.json();
 
-      const tabla = document.getElementById("tablaGlobal");
-      const Global = data.Global;
-
-      Global.slice(1).forEach(fila => {
-        const [nombre, aciertos] = fila;
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${nombre}</td><td>${aciertos}</td>`;
-        tabla.appendChild(tr);
+      // Victorias que pones en el panel admin; los jugadores que aún no tienen ninguna salen con 0
+      const mapa = new Map();
+      (data.global || data.Global || []).slice(1).forEach(f => {
+        const n = String(f[0] == null ? "" : f[0]).trim();
+        if (n) mapa.set(n, Math.max(0, Number(f[1]) || 0));
       });
-    } catch (error) {
-      console.error("Error cargando la clasificación:", error);
+      (data.pronosticos || []).slice(1).forEach(f => {
+        const n = String(f[0] == null ? "" : f[0]).trim();
+        if (n && !mapa.has(n)) mapa.set(n, 0);
+      });
+
+      const lista = [...mapa].map(([nombre, v]) => ({ nombre, v }))
+        .sort((a, b) => b.v - a.v || a.nombre.localeCompare(b.nombre, "es"));
+      if (!lista.length) { document.getElementById("sub").textContent = "Todavía no hay jugadores"; return; }
+
+      // Posición con empates (dos con las mismas victorias comparten puesto)
+      let r = 0;
+      lista.forEach((j, i) => { if (i === 0 || j.v !== lista[i - 1].v) r = i + 1; j.rank = r; });
+      const max = lista[0].v;
+
+      document.getElementById("sub").textContent = "Quinielas ganadas en total";
+
+      let enPodio = [];
+      if (max === 0) {
+        const aviso = document.getElementById("aviso");
+        aviso.style.display = "block";
+        aviso.textContent = "Todavía nadie ha ganado una quiniela";
+      } else {
+        enPodio = lista.slice(0, 3).filter(j => j.v > 0);
+      }
+
+      // Podio: 2º a la izquierda, 1º en el centro, 3º a la derecha
+      const podio = document.getElementById("podio");
+      const orden = [1, 0, 2].filter(i => enPodio[i]);
+      orden.forEach(i => {
+        const j = enPodio[i];
+        const rango = Math.min(j.rank, 3);
+        const col = el("div", "col r" + rango);
+        col.appendChild(el("div", "corona", rango === 1 ? "👑" : ""));
+        col.appendChild(el("div", "avatar", j.nombre.charAt(0) || "?"));
+        const n = el("div", "nombre", j.nombre);
+        n.title = j.nombre;
+        col.appendChild(n);
+        const v = el("div", "vict");
+        v.appendChild(el("b", "", String(j.v)));
+        v.appendChild(document.createTextNode(plural(j.v)));
+        col.appendChild(v);
+        const b = el("div", "bloque");
+        b.appendChild(el("div", "medalla", ["🥇", "🥈", "🥉"][rango - 1]));
+        b.appendChild(el("div", "pos", j.rank + "º"));
+        col.appendChild(b);
+        podio.appendChild(col);
+      });
+      if (enPodio.length) podio.after(el("div", "base"));
+      else podio.style.display = "none";
+
+      // El resto de jugadores, con su número de victorias al lado
+      const resto = document.getElementById("resto");
+      lista.filter(j => !enPodio.includes(j)).forEach(j => {
+        const f = el("div", "fila");
+        f.appendChild(el("div", "rango", j.rank + "º"));
+        f.appendChild(el("div", "n", j.nombre));
+        const pista = el("div", "pista");
+        const barra = el("i");
+        barra.style.width = (max ? Math.round(j.v / max * 100) : 0) + "%";
+        pista.appendChild(barra);
+        f.appendChild(pista);
+        f.appendChild(el("div", "v", j.v + " 🏆"));
+        resto.appendChild(f);
+      });
+    } catch (e) {
+      console.error("Error cargando la clasificación:", e);
+      document.getElementById("sub").textContent = "";
+      document.getElementById("resto").replaceChildren(el("div", "msg", "Error de conexión. Revisa la consola."));
     }
   }
-
-  cargarGlobal();
+  cargar();
 </script>
 
 </body>
