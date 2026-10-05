@@ -25,7 +25,7 @@
     h1 { 
       text-align: center; 
       color: #003366; 
-      margin-bottom: 30px; 
+      margin-bottom: 25px; 
       border-bottom: 4px solid #0056b3; 
       padding-bottom: 10px;
       text-transform: uppercase;
@@ -193,13 +193,12 @@
       return val.toString().includes('%') ? val : val + "%";
     }
 
-    // Pinta la lista de nombres buscando primero en clasificacion o pronosticos
+    // Pinta la lista de nombres desde la pestaña Clasificación o Pronósticos
     function pintarNombres() {
       const selN = document.getElementById("nombre");
       const actual = selN.value;
       selN.innerHTML = '<option value="">Elige tu nombre</option>';
       
-      // Busca la lista de usuarios en Clasificación o Pronósticos
       const listaUsuarios = (DATOS.clasificacion && DATOS.clasificacion.length > 1) 
         ? DATOS.clasificacion 
         : DATOS.pronosticos;
@@ -286,6 +285,7 @@
       pintarNombres();
     });
 
+    // Envío del formulario rápido para evitar timeouts
     document.getElementById("quinielaForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = e.target.querySelector('button');
@@ -296,14 +296,22 @@
       const payload = Object.fromEntries(formData.entries());
       
       try {
-        const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+        const res = await fetch(API_URL, { 
+          method: "POST", 
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload) 
+        });
+        
         const r = await res.json();
-        if(r.resultado === "ok") { 
-          alert("✅ ¡Pronóstico enviado!"); 
+        if (r.resultado === "ok") { 
+          alert("✅ ¡Pronóstico enviado correctamente!"); 
           location.reload(); 
+        } else {
+          throw new Error(r.detalle || "Error al procesar la respuesta.");
         }
       } catch (err) {
-        alert("❌ Error al enviar.");
+        console.error(err);
+        alert("Ojo, comprueba que se ha registrador tu apuesta");
         btn.disabled = false;
         btn.innerText = "🚀 Enviar Pronóstico";
       }
