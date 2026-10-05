@@ -698,34 +698,48 @@
     cont.innerHTML = "";
     var esc = (DATA && DATA.escrutinio) || [];
     var aciertosOrdenados = [15, 14, 13, 12, 11, 10];
-    
+
     for (var i = 1; i < esc.length; i++) {
       var matchParentesis = String(esc[i][0]).match(/\((\d+)\)/);
       var numAciertos = matchParentesis ? matchParentesis[1] : (aciertosOrdenados[i - 1] || esc[i][0]);
-      
-      // Etiqueta del número de aciertos
+
+      // Fila contenedora para mantener alineada la etiqueta y los 2 inputs
+      var fila = document.createElement("div");
+      fila.style.display = "grid";
+      fila.style.gridTemplateColumns = "110px 1fr 1fr";
+      fila.style.gap = "8px";
+      fila.style.alignItems = "center";
+      fila.style.marginBottom = "8px";
+
+      // Etiqueta (ej: 15 aciertos)
       var lab = document.createElement("div"); 
       lab.textContent = numAciertos + " aciertos";
-      
-      // Input para el número de acertantes
+      lab.style.fontSize = "13px";
+      lab.style.fontWeight = "600";
+
+      // Input para número de acertantes
       var inpAcertantes = document.createElement("input");
       inpAcertantes.type = "number";
       inpAcertantes.placeholder = "Acertantes";
       inpAcertantes.className = "qa-acertantes-input";
       inpAcertantes.setAttribute("data-i", String(i - 1));
-      inpAcertantes.value = esc[i][1] || 0;
+      inpAcertantes.value = esc[i][1] != null ? esc[i][1] : 0;
+      inpAcertantes.style.padding = "6px 8px";
 
-      // Input para el premio en euros
+      // Input para el importe del premio en €
       var inpPremio = document.createElement("input");
       inpPremio.type = "text"; 
       inpPremio.placeholder = "Premio (€)";
       inpPremio.className = "qa-premios-input";
       inpPremio.setAttribute("data-i", String(i - 1)); 
-      inpPremio.value = esc[i][2] || 0;
-      
-      cont.appendChild(lab); 
-      cont.appendChild(inpAcertantes);
-      cont.appendChild(inpPremio);
+      inpPremio.value = esc[i][2] != null ? esc[i][2] : 0;
+      inpPremio.style.padding = "6px 8px";
+
+      fila.appendChild(lab);
+      fila.appendChild(inpAcertantes);
+      fila.appendChild(inpPremio);
+
+      cont.appendChild(fila);
     }
   }
 
@@ -733,11 +747,10 @@
     var premios = [];
     var acertantes = [];
 
-    // Recogemos los valores de ambos inputs
     Array.prototype.forEach.call(document.querySelectorAll("#qa-premios .qa-premios-input"), function (i) { 
       premios[parseInt(i.getAttribute("data-i"), 10)] = i.value; 
     });
-    
+
     Array.prototype.forEach.call(document.querySelectorAll("#qa-premios .qa-acertantes-input"), function (i) { 
       acertantes[parseInt(i.getAttribute("data-i"), 10)] = i.value; 
     });
@@ -745,9 +758,8 @@
     var btn = $("qa-premios-go");
     btn.disabled = true;
     setMsg("qa-premios-msg", "Guardando...");
-    
+
     try {
-      // Enviamos tanto los premios como los acertantes al backend
       var r = await post({ action: "guardarPremios", premios: premios, acertantes: acertantes });
       setMsg("qa-premios-msg", r.resultado === "ok" ? "✅ Premios y acertantes guardados" : (r.error || "Error"), r.resultado === "ok" ? "ok" : "err");
     } catch (e) { 
