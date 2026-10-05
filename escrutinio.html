@@ -107,6 +107,20 @@
     }
     .summary strong { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
     .summary small { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; opacity: .88; }
+    .summary div.highlight {
+      background: linear-gradient(135deg, #ffd23f, #ff9f1c, #ff7b00);
+      color: #3a2200;
+      padding: 14px 8px;
+      box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 8px 24px rgba(255,140,0,.45);
+      animation: glow 2.4s ease-in-out infinite;
+    }
+    .summary div.highlight .trophy { display: block; font-size: 30px; line-height: 1; margin-bottom: 4px; }
+    .summary div.highlight strong { font-size: 32px; letter-spacing: .3px; }
+    .summary div.highlight small { opacity: 1; font-weight: 700; }
+    @keyframes glow { 0%,100% { box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 8px 24px rgba(255,140,0,.45); } 50% { box-shadow: 0 0 0 4px rgba(255,255,255,.8), 0 8px 34px rgba(255,170,0,.8); } }
+
+    .info .cat { display: block; font-size: 15px; font-weight: 700; margin-bottom: 7px; }
+    .info .cat em { font-style: normal; font-weight: 600; font-size: 12px; color: var(--muted); margin-left: 6px; }
 
     /* Lista de premios */
     .list { display: grid; gap: 12px; margin-top: 18px; }
@@ -209,7 +223,11 @@
       <h1>Escrutinio de Premios</h1>
       <p id="subtitulo">Cargando el reparto…</p>
       <div class="summary">
-        <div><strong id="totalPremios">–</strong><small>Total en premios</small></div>
+        <div class="highlight">
+          <span class="trophy" aria-hidden="true">🏆</span>
+          <strong id="premioMayor">–</strong>
+          <small id="premioMayorLabel">Premio mayor</small>
+        </div>
       </div>
     </header>
 
@@ -281,13 +299,13 @@
         if (!filas.length) {
           lista.innerHTML = '<div class="msg">Todavía no hay escrutinio disponible ⏳</div>';
           document.getElementById("subtitulo").textContent = "Vuelve en cuanto se publique";
-          document.getElementById("totalPremios").textContent = "–";
+          document.getElementById("premioMayor").textContent = "–";
           return;
         }
 
         lista.innerHTML = "";
         const maxPremio = Math.max.apply(null, filas.map(function (f) { return f.premio; })) || 1;
-        const totalRep = filas.reduce(function (s, f) { return s + f.premio; }, 0);
+        const idxMayor = filas.findIndex(function (f) { return f.premio === maxPremio && f.premio > 0; });
 
         // Secuencia predefinida para los aciertos de la Quiniela (15, 14, 13, 12, 11, 10)
         const aciertosOrdenados = [15, 14, 13, 12, 11, 10];
@@ -300,12 +318,16 @@
           const matchParentesis = String(f.aciertos).match(/\((\d+)\)/);
           const numAciertos = matchParentesis ? matchParentesis[1] : (aciertosOrdenados[i] || f.aciertos);
 
+          // Nombre de la categoría sin el paréntesis: "Pleno al 15", "1ª categoría", "2ª categoría"...
+          const base = String(f.aciertos).replace(/\s*\(.*$/, "").trim();
+          const nombreCat = /^pleno/i.test(base) ? base : base + " categoría";
+
           const row = document.createElement("div");
           row.className = "row" + (esTop ? " top" : "") + (desierto ? " empty" : "");
           row.style.animationDelay = (i * 0.07) + "s";
           row.innerHTML =
             '<div class="badge"><div>' + numAciertos + '<small>aciertos</small></div></div>' +
-            '<div class="info"><div class="bar"><i></i></div></div>' +
+            '<div class="info"><span class="cat">' + nombreCat + (esTop ? '<em>🏆 Premio mayor</em>' : '') + '</span><div class="bar"><i></i></div></div>' +
             '<div class="prize' + (f.premio === 0 ? ' zero' : '') + '"></div>';
           lista.appendChild(row);
           if (desierto) setTimeout(function () { row.classList.add("in"); }, i * 70 + 560);
@@ -324,7 +346,13 @@
         });
 
         document.getElementById("subtitulo").textContent = filas.length + " categorías de premio";
-        contar(document.getElementById("totalPremios"), totalRep, function (v) { return fmt(v) + " €"; });
+        if (idxMayor >= 0) {
+          contar(document.getElementById("premioMayor"), maxPremio, function (v) { return fmt(v) + " €"; });
+          document.getElementById("premioMayorLabel").textContent = "Premio mayor · " + (aciertosOrdenados[idxMayor] || "") + " aciertos";
+        } else {
+          document.getElementById("premioMayor").textContent = "–";
+          document.getElementById("premioMayorLabel").textContent = "Sin premios todavía";
+        }
       } catch (error) {
         console.error("Error cargando el escrutinio:", error);
         mostrarError();
