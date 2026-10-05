@@ -4,7 +4,8 @@
    (validada en el servidor, Apps Script) y permite:
      · rotar al azar el usuario especial ⭐
      · poner los resultados de la jornada (columna D de la hoja Partidos)
-     · visualizar la web de referencia de Quiniela
+     · tener a la vista una capa de REFERENCIA con los resultados reales
+       (una web, una imagen por dirección, o una captura pegada con Ctrl+V)
    Uso: <script src="admin.js"></script> al final del <body>.
    ===================================================================== */
 (function () {
@@ -13,8 +14,10 @@
   var API_URL = "/api";
   var ADMIN_PASS = "";   // solo en memoria; nunca se guarda
   var DATA = null;       // última copia de datos leída del Sheet
+  var LS_KEY = "qa-ref-url";
+  var imgObjectUrl = null;
 
-  /* ---------- Estilos ---------- */
+  /* ---------- Estilos (acotados a #qa-overlay para no chocar con la página) ---------- */
   var css = [
     "#qa-overlay{display:none;position:fixed;inset:0;background:rgba(0,20,40,.65);z-index:10000;justify-content:center;align-items:flex-start;overflow-y:auto;padding:16px;font-family:'Segoe UI',Tahoma,sans-serif}",
     "#qa-overlay *{box-sizing:border-box}",
@@ -23,7 +26,7 @@
     "#qa-box h2{margin:0 0 14px;text-align:center;color:#003366;border:0;padding:0;text-transform:none;font-size:1.4em}",
     "#qa-box h3{margin:22px 0 10px;color:#003366;border-bottom:2px solid #b3d7ff;padding-bottom:6px;font-size:1.05em}",
     "#qa-box h3:first-child{margin-top:0}",
-    "#qa-box input[type=password]{width:100%;padding:10px;margin:0;border:2px solid #b3d7ff;border-radius:8px;font-size:16px;background:#f8fbff}",
+    "#qa-box input[type=password],#qa-box input[type=text],#qa-box select{width:100%;padding:10px;margin:0;border:2px solid #b3d7ff;border-radius:8px;font-size:16px;background:#f8fbff}",
     "#qa-box button{display:block;width:100%;padding:12px;margin:12px 0 0;border:0;border-radius:8px;background:#0056b3;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;transform:none;box-shadow:none}",
     "#qa-box button:hover{background:#003d80;transform:none;box-shadow:none}",
     "#qa-box button:disabled{opacity:.6;cursor:wait}",
@@ -65,16 +68,28 @@
     "@media (min-width:900px){#qa-box.qa-wide #qa-cols{display:grid;grid-template-columns:1.15fr 1fr;gap:22px;align-items:start}#qa-col-ref{position:sticky;top:8px}}",
     "#qa-col-ref{margin-bottom:18px}",
     "#qa-ref{border:2px solid #b3d7ff;border-radius:12px;padding:12px;background:#f8fbff}",
-    "#qa-ref>summary{cursor:pointer;font-weight:bold;color:#003366;font-size:1.05em;margin-bottom:8px}",
-    "#qa-visor iframe{width:100%;height:65vh;min-height:400px;border:1px solid #b3d7ff;border-radius:8px;background:#fff}",
+    "#qa-ref>summary{cursor:pointer;font-weight:bold;color:#003366;font-size:1.05em}",
+    ".qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}",
+    ".qa-links a{flex:1 1 auto;text-align:center;padding:8px 10px;border-radius:8px;background:#e3f2fd;color:#0056b3;text-decoration:none;font-size:13px;font-weight:bold;border:1px solid #b3d7ff}",
+    ".qa-links a:hover{background:#cfe7fb}",
+    ".qa-urlrow{display:flex;gap:8px;margin-top:10px}",
+    "#qa-box .qa-urlrow button{width:auto;margin:0;padding:10px 14px;white-space:nowrap}",
+    "#qa-drop{margin-top:10px;padding:14px;border:2px dashed #7fb4ea;border-radius:10px;text-align:center;color:#003366;font-size:14px;background:#fff;outline:none}",
+    "#qa-drop:focus,#qa-drop.qa-over{border-color:#0056b3;background:#eef6ff}",
+    "#qa-drop label{color:#0056b3;text-decoration:underline;cursor:pointer;display:inline;margin:0;font-weight:bold}",
+    "#qa-visor{margin-top:10px}",
+    "#qa-visor iframe{width:100%;height:62vh;min-height:360px;border:1px solid #b3d7ff;border-radius:8px;background:#fff}",
+    "#qa-visor img{width:100%;height:auto;max-height:70vh;object-fit:contain;display:block;border:1px solid #b3d7ff;border-radius:8px;background:#fff;cursor:zoom-in}",
+    "#qa-visor img.qa-zoom{max-height:none;cursor:zoom-out}",
     ".qa-refbtns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}",
-    "#qa-box .qa-refbtns a{flex:1 1 auto;width:auto;margin:0;padding:8px 10px;font-size:13px;text-align:center;border-radius:8px;text-decoration:none;display:inline-block;background:#0056b3;color:#fff;font-weight:bold}"
+    "#qa-box .qa-refbtns button,#qa-box .qa-refbtns a{flex:1 1 auto;width:auto;margin:0;padding:8px 10px;font-size:13px;text-align:center;border-radius:8px;text-decoration:none;display:inline-block}",
+    "#qa-box .qa-refbtns a{background:#0056b3;color:#fff;font-weight:bold}"
   ].join("\n");
   var styleEl = document.createElement("style");
   styleEl.textContent = css;
   document.head.appendChild(styleEl);
 
-  /* ---------- Estructura del modal ---------- */
+  /* ---------- Estructura del modal (solo HTML estático) ---------- */
   var overlay = document.createElement("div");
   overlay.id = "qa-overlay";
   overlay.innerHTML =
@@ -94,12 +109,23 @@
             '<div id="qa-col-ref">' +
               '<details id="qa-ref" open>' +
                 '<summary>📺 Resultados de referencia</summary>' +
-                '<div id="qa-visor">' +
-                  '<iframe src="https://www.combinacionganadora.com/quiniela/" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>' +
+                '<div class="qa-links">' +
+                  '<a href="https://www.flashscore.es/" target="_blank" rel="noopener noreferrer">Flashscore</a>' +
+                  '<a href="https://es.besoccer.com/" target="_blank" rel="noopener noreferrer">BeSoccer</a>' +
+                  '<a href="https://www.resultados-futbol.com/" target="_blank" rel="noopener noreferrer">Resultados Fútbol</a>' +
+                  '<a href="https://www.laliga.com/" target="_blank" rel="noopener noreferrer">LaLiga</a>' +
                 '</div>' +
-                '<div class="qa-refbtns">' +
-                  '<a href="https://www.combinacionganadora.com/quiniela/" target="_blank" rel="noopener noreferrer">↗ Abrir en pestaña nueva</a>' +
+                '<div class="qa-urlrow">' +
+                  '<input type="text" id="qa-ref-url" placeholder="Dirección de una web o de una imagen" autocomplete="off" />' +
+                  '<button type="button" id="qa-ref-cargar">Cargar</button>' +
                 '</div>' +
+                '<div id="qa-drop" tabindex="0">📋 Pega aquí una <b>captura</b> (Ctrl+V), arrástrala, o <label>elige un archivo<input type="file" id="qa-ref-file" accept="image/*" hidden></label></div>' +
+                '<div id="qa-visor"></div>' +
+                '<div class="qa-refbtns" id="qa-refbtns" style="display:none">' +
+                  '<a id="qa-ref-abrir" href="#" target="_blank" rel="noopener noreferrer">↗ Abrir en pestaña nueva</a>' +
+                  '<button type="button" class="qa-sec" id="qa-ref-quitar">✖ Quitar</button>' +
+                '</div>' +
+                '<div class="qa-msg" id="qa-ref-msg"></div>' +
               '</details>' +
             '</div>' +
             '<div id="qa-col-main">' +
@@ -113,7 +139,7 @@
                 '<div id="qa-lista"></div>' +
                 '<div id="qa-pleno" style="display:none">' +
                   '<div class="qa-pl-title">🔥 PLENO AL 15</div>' +
-                  '<div class="qa-pleno-label" id="qa-pleno-label"></div>' +
+                  '<div class="qa-pl-match" id="qa-pleno-label"></div>' +
                   '<div class="qa-pl-grid"><div class="qa-pl-eq" id="qa-pl-l"></div><div class="qa-pl-eq" id="qa-pl-v"></div></div>' +
                   '<div class="qa-pl-res" id="qa-pl-res"></div>' +
                 '</div>' +
@@ -226,6 +252,7 @@
       pintarEspecial();
       pintarPartidos();
       $("qa-contenido").style.display = "block";
+      restaurarReferencia();
     } catch (e) {
       setMsg("qa-carga-msg", "No se pudieron cargar los datos", "err");
     }
@@ -238,6 +265,7 @@
   /* ---------- Boleto: casillas 1 X 2 y pleno al 15 ---------- */
   var plL = "", plV = "";   // marcador del pleno al 15 (0, 1, 2, M o "")
 
+  // "RAYO VALLECANO (M) (15º)" -> nombre en grande y "(M) (15º)" en pequeño
   function nombreEquipo(txt) {
     var s = String(txt == null ? "" : txt);
     var m = s.match(/^(.*?)\s*(\(.*)$/);
@@ -277,8 +305,9 @@
     var partidos = DATA.partidos || [];
 
     for (var i = 1; i <= 14; i++) {
+      (function (i) {   // función propia por fila: cada fila necesita sus variables (grp...) independientes
       var p = partidos[i];
-      if (!p) continue;
+      if (!p) return;
       var fila = document.createElement("div");
       fila.className = "qa-fila";
       fila.setAttribute("data-idx", String(i - 1));
@@ -302,8 +331,8 @@
         var c = nuevaCasilla(v, v === actual);
         c.onclick = function () {
           var yaOn = c.classList.contains("on");
-          Array.prototype.forEach.call(c.parentElement.querySelectorAll(".qa-cas"), function (x) { x.classList.remove("on"); });
-          if (!yaOn) c.classList.add("on");
+          Array.prototype.forEach.call(grp.querySelectorAll(".qa-cas"), function (x) { x.classList.remove("on"); });
+          if (!yaOn) c.classList.add("on");      // tocar la marcada la quita
           actualizarContador();
         };
         grp.appendChild(c);
@@ -313,9 +342,11 @@
       fila.appendChild(eq);
       fila.appendChild(grp);
       lista.appendChild(fila);
+      })(i);
     }
     actualizarContador();
 
+    // Pleno al 15 (fila 16 del Sheet): una columna 0/1/2/M por cada equipo
     var p15 = partidos[15];
     var caja = $("qa-pleno");
     if (p15) {
@@ -355,6 +386,103 @@
     setMsg("qa-res-msg", "");
   };
 
+  /* ---------- Capa de referencia (web / imagen / captura pegada) ---------- */
+  function lsGet() { try { return localStorage.getItem(LS_KEY) || ""; } catch (e) { return ""; } }
+  function lsSet(v) { try { localStorage.setItem(LS_KEY, v); } catch (e) {} }
+
+  function limpiarVisor() {
+    $("qa-visor").innerHTML = "";
+    $("qa-refbtns").style.display = "none";
+    if (imgObjectUrl) { try { URL.revokeObjectURL(imgObjectUrl); } catch (e) {} imgObjectUrl = null; }
+  }
+
+  function normalizaUrl(txt) {
+    txt = (txt || "").trim();
+    if (!txt) return "";
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(txt)) txt = "https://" + txt;
+    return /^https?:\/\//i.test(txt) ? txt : "";   // solo http(s): nada de javascript:, data:, etc.
+  }
+
+  function mostrarImagen(src, abrirHref) {
+    limpiarVisor();
+    var img = document.createElement("img");
+    img.alt = "Resultados de referencia";
+    img.onclick = function () { img.classList.toggle("qa-zoom"); };
+    img.onerror = function () { setMsg("qa-ref-msg", "No se pudo cargar la imagen", "err"); };
+    img.src = src;
+    $("qa-visor").appendChild(img);
+    $("qa-ref-abrir").href = abrirHref || src;
+    $("qa-refbtns").style.display = "flex";
+    setMsg("qa-ref-msg", "Pulsa la imagen para ampliarla", "");
+  }
+
+  function mostrarWeb(url) {
+    limpiarVisor();
+    var fr = document.createElement("iframe");
+    fr.setAttribute("referrerpolicy", "no-referrer");
+    fr.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups allow-forms");
+    fr.src = url;
+    $("qa-visor").appendChild(fr);
+    $("qa-ref-abrir").href = url;
+    $("qa-refbtns").style.display = "flex";
+    setMsg("qa-ref-msg", "Si sale en blanco o con un error, esa web no permite mostrarse aquí: usa «Abrir en pestaña nueva» o pega una captura.", "");
+  }
+
+  function cargarReferencia() {
+    var url = normalizaUrl($("qa-ref-url").value);
+    if (!url) { setMsg("qa-ref-msg", "Escribe una dirección válida (https://...)", "err"); return; }
+    $("qa-ref-url").value = url;
+    lsSet(url);
+    if (/\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(url)) mostrarImagen(url, url);
+    else mostrarWeb(url);
+  }
+
+  function mostrarArchivo(file) {
+    if (!file || !/^image\//.test(file.type || "")) { setMsg("qa-ref-msg", "Eso no es una imagen", "err"); return; }
+    var src = URL.createObjectURL(file);
+    mostrarImagen(src, src);
+    imgObjectUrl = src;   // se libera al quitar/cambiar (mostrarImagen limpió el anterior antes)
+  }
+
+  function restaurarReferencia() {
+    var guardada = lsGet();
+    if (guardada && !$("qa-ref-url").value) $("qa-ref-url").value = guardada;
+    if (window.matchMedia && !window.matchMedia("(min-width:900px)").matches) $("qa-ref").open = false;
+  }
+
+  $("qa-ref-cargar").onclick = cargarReferencia;
+  $("qa-ref-url").addEventListener("keydown", function (e) { if (e.key === "Enter") cargarReferencia(); });
+  $("qa-ref-quitar").onclick = function () { limpiarVisor(); setMsg("qa-ref-msg", ""); };
+  $("qa-ref-file").addEventListener("change", function (e) {
+    mostrarArchivo(e.target.files && e.target.files[0]);
+    e.target.value = "";
+  });
+
+  var drop = $("qa-drop");
+  ["dragenter", "dragover"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("qa-over"); });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("qa-over"); });
+  });
+  drop.addEventListener("drop", function (e) {
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) mostrarArchivo(f);
+  });
+
+  // Ctrl+V en cualquier parte del panel: si lo pegado es una imagen, se muestra.
+  // (Si es texto, se deja como está para poder pegar direcciones en el campo.)
+  document.addEventListener("paste", function (e) {
+    if (overlay.style.display !== "flex" || $("qa-panel").style.display === "none") return;
+    var items = (e.clipboardData && e.clipboardData.items) || [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === "file" && /^image\//.test(items[i].type)) {
+        var f = items[i].getAsFile();
+        if (f) { e.preventDefault(); mostrarArchivo(f); return; }
+      }
+    }
+  });
+
   /* ---------- Rotar usuario especial ---------- */
   $("qa-rotar").onclick = async function () {
     if (!confirm("¿Elegir un nuevo usuario especial al azar?")) return;
@@ -367,6 +495,7 @@
         DATA.usuarioEspecial = r.usuarioEspecial;
         pintarEspecial();
         setMsg("qa-rotar-msg", "Nuevo usuario especial: " + r.usuarioEspecial, "ok");
+        // Avisa a la página (enviar.html lo usa para repintar la ⭐)
         window.dispatchEvent(new CustomEvent("quiniela:especial", { detail: { usuario: r.usuarioEspecial } }));
       } else {
         setMsg("qa-rotar-msg", r.error || "Error", "err");
