@@ -24,8 +24,15 @@
     .flecha { transition: transform .2s; color: #0077cc; font-size: 14px; }
     .jugador[open] .flecha { transform: rotate(90deg); }
     .nombre { flex: 1; text-align: left; font-size: 1.05em; }
-    .aciertos { color: #0077cc; font-size: 1.25em; min-width: 2ch; text-align: right; }
-    .aciertos small { font-size: .6em; color: #5b7fa6; font-weight: normal; margin-left: 4px; text-transform: uppercase; letter-spacing: .5px; }
+    .marcador { display: flex; gap: 16px; align-items: baseline; }
+    .cifra { font-size: 1.25em; text-align: right; white-space: nowrap; }
+    .cifra small { font-size: .55em; font-weight: normal; margin-left: 4px; text-transform: uppercase; letter-spacing: .5px; }
+    .cifra.ac { color: #1e7e34; } .cifra.ac small { color: #4f8a5f; }
+    .cifra.fa { color: #c82333; } .cifra.fa small { color: #b5707a; }
+    .nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .pendientes { text-align: center; margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; background: #fff3cd; border: 1px solid #ffe08a; color: #7a5b00; font-weight: bold; font-size: 15px; }
+    .pendientes.fin { background: #d4edda; border-color: #b7dfc2; color: #155724; }
 
     /* ---------- Boleto del jugador: 2 columnas ---------- */
     .boleto { border-top: 2px solid #0077cc; background: #fbfdff; }
@@ -41,8 +48,6 @@
     .celdas.ok td   { background: #d4edda; color: #155724; }
     .celdas.fail td { background: #f8d7da; color: #721c24; }
     .celdas.pend td { background: #fff; color: #6c757d; }
-    .celdas.ok td:last-child::after   { content: " ✔"; font-size: 15px; }
-    .celdas.fail td:last-child::after { content: " ✘"; font-size: 15px; }
 
     .pleno-tit td { background: #fff3cd !important; color: #856404 !important; border-top: 2px solid #ffd700 !important; }
     .resumen { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; padding: 10px; font-size: 13px; font-weight: bold; background: #fff; border-top: 1px solid #dee2e6; }
@@ -64,6 +69,8 @@
     <p class="sub">Pulsa un nombre para ver su quiniela</p>
     <div class="leyenda"><span class="l-ok">Acertado</span><span class="l-fail">Fallado</span><span class="l-pend">Sin resultado</span></div>
 
+    <div id="pendientes" class="pendientes" style="display:none"></div>
+
     <div id="listaJugadores"><div class="msg">Cargando clasificación en tiempo real...</div></div>
 
     <a class="btn-volver" href="index.html">⬅ Volver a inicio</a>
@@ -84,6 +91,42 @@
       if (cls) e.className = cls;
       if (txt !== undefined) e.textContent = txt;
       return e;
+    }
+
+    // Estado de cada uno de los 14 partidos para un jugador: "ok" | "fail" | "pend"
+    function evaluar(fila, partidos) {
+      const est = {}; let ok = 0, fail = 0, pend = 0;
+      for (let i = 1; i <= 14; i++) {
+        const p = partidos[i];
+        if (!p) continue;
+        const res = norm(p[3]);
+        if (!esResultado(res)) { est[i] = "pend"; pend++; }
+        else if (norm(fila[i]) === res) { est[i] = "ok"; ok++; }
+        else { est[i] = "fail"; fail++; }
+      }
+      return { est, ok, fail, pend };
+    }
+
+    // Partidos de la quiniela (los 14) que todavía no tienen resultado. El pleno al 15 no cuenta.
+    function partidosPendientes(partidos) {
+      let pend = 0, total = 0;
+      for (let i = 1; i <= 14; i++) {
+        if (!partidos[i]) continue;
+        total++; if (!esResultado(norm(partidos[i][3]))) pend++;
+      }
+      return { pend, total };
+    }
+
+    function pintarPendientes(partidos) {
+      const box = document.getElementById("pendientes");
+      const { pend, total } = partidosPendientes(partidos);
+      if (!total) { box.style.display = "none"; return; }
+      box.style.display = "block";
+      box.classList.toggle("fin", pend === 0);
+      box.textContent = pend === 0
+        ? "Jornada terminada: los " + total + " partidos tienen resultado"
+        : (pend === 1 ? "Queda 1 de " + total + " partidos por terminar o disputarse"
+                      : "Quedan " + pend + " de " + total + " partidos por terminar o disputarse");
     }
 
     // Una fila de la quiniela: línea con el partido + línea con [apuesta | resultado]
@@ -109,16 +152,14 @@
       thead.appendChild(trh); tabla.appendChild(thead);
       const tbody = el("tbody"); tabla.appendChild(tbody);
 
-      let ok = 0, fail = 0, pend = 0;
+      const ev = evaluar(fila, partidos);
+      const { ok, fail, pend } = ev;
       for (let i = 1; i <= 14; i++) {
         const p = partidos[i];
         if (!p) continue;
         const apuesta = norm(fila[i]);
         const res = norm(p[3]);
-        let estado = "pend";
-        if (esResultado(res)) {
-          if (apuesta === res) { estado = "ok"; ok++; } else { estado = "fail"; fail++; }
-        } else { pend++; }
+        const estado = ev.est[i];
         filaPartido(tbody, String(p[0] || i), equipo(p[1]) + " – " + equipo(p[2]), apuesta, esResultado(res) ? res : "", estado);
       }
 
@@ -138,7 +179,7 @@
 
       caja.appendChild(tabla);
       const resumen = el("div", "resumen");
-      resumen.append(el("span", "v", "✔ " + ok + " acertados"), el("span", "r", "✘ " + fail + " fallados"), el("span", "p", "… " + pend + " sin resultado"));
+      resumen.append(el("span", "v", ok + " acertados"), el("span", "r", fail + " fallados"), el("span", "p", pend + " sin resultado"));
       caja.appendChild(resumen);
       return caja;
     }
@@ -158,6 +199,8 @@
           return;
         }
 
+        pintarPendientes(partidos);
+
         // Pronósticos de cada jugador, buscados por nombre
         const porNombre = {};
         pronos.slice(1).forEach(f => { if (clave(f[0])) porNombre[clave(f[0])] = f; });
@@ -170,9 +213,14 @@
           const sum = el("summary");
           sum.appendChild(el("span", "flecha", "▶"));
           sum.appendChild(el("span", "nombre", nombre));
-          const ac = el("span", "aciertos", String(fila[1] || 0));
-          ac.appendChild(el("small", "", "aciertos"));
-          sum.appendChild(ac);
+          const ev = porNombre[clave(nombre)] ? evaluar(porNombre[clave(nombre)], partidos) : null;
+          const marcador = el("span", "marcador");
+          const ac = el("span", "cifra ac", ev ? String(ev.ok) : "—");
+          ac.appendChild(el("small", "", ev && ev.ok === 1 ? "acierto" : "aciertos"));
+          const fa = el("span", "cifra fa", ev ? String(ev.fail) : "—");
+          fa.appendChild(el("small", "", ev && ev.fail === 1 ? "fallo" : "fallos"));
+          marcador.append(ac, fa);
+          sum.appendChild(marcador);
           det.appendChild(sum);
 
           // El boleto se construye al abrir (más ligero y siempre con lo último cargado)

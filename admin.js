@@ -14,7 +14,8 @@
   var API_URL = "/api";
   var ADMIN_PASS = "";   // solo en memoria; nunca se guarda
   var DATA = null;       // última copia de datos leída del Sheet
-  var LS_KEY = "qa-ref-url";
+  var REF_DEFAULT = "https://www.flashscore.es/";   // web que se carga por defecto en la capa de referencia
+  var refIniciada = false;                          // true en cuanto se carga (o se quita) algo en la capa
   var imgObjectUrl = null;
 
   /* ---------- Estilos (acotados a #qa-overlay para no chocar con la página) ---------- */
@@ -387,10 +388,8 @@
   };
 
   /* ---------- Capa de referencia (web / imagen / captura pegada) ---------- */
-  function lsGet() { try { return localStorage.getItem(LS_KEY) || ""; } catch (e) { return ""; } }
-  function lsSet(v) { try { localStorage.setItem(LS_KEY, v); } catch (e) {} }
-
   function limpiarVisor() {
+    refIniciada = true;   // a partir de aquí ya no se vuelve a cargar la web por defecto sola
     $("qa-visor").innerHTML = "";
     $("qa-refbtns").style.display = "none";
     if (imgObjectUrl) { try { URL.revokeObjectURL(imgObjectUrl); } catch (e) {} imgObjectUrl = null; }
@@ -432,7 +431,6 @@
     var url = normalizaUrl($("qa-ref-url").value);
     if (!url) { setMsg("qa-ref-msg", "Escribe una dirección válida (https://...)", "err"); return; }
     $("qa-ref-url").value = url;
-    lsSet(url);
     if (/\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(url)) mostrarImagen(url, url);
     else mostrarWeb(url);
   }
@@ -444,11 +442,17 @@
     imgObjectUrl = src;   // se libera al quitar/cambiar (mostrarImagen limpió el anterior antes)
   }
 
-  function restaurarReferencia() {
-    var guardada = lsGet();
-    if (guardada && !$("qa-ref-url").value) $("qa-ref-url").value = guardada;
-    if (window.matchMedia && !window.matchMedia("(min-width:900px)").matches) $("qa-ref").open = false;
+  // Al abrir el panel se carga Flashscore. En el móvil la capa empieza plegada y se carga al desplegarla.
+  function cargarPorDefecto() {
+    if (refIniciada || !$("qa-ref").open) return;
+    $("qa-ref-url").value = REF_DEFAULT;
+    mostrarWeb(REF_DEFAULT);
   }
+  function restaurarReferencia() {
+    if (window.matchMedia && !window.matchMedia("(min-width:900px)").matches) $("qa-ref").open = false;
+    cargarPorDefecto();
+  }
+  $("qa-ref").addEventListener("toggle", cargarPorDefecto);
 
   $("qa-ref-cargar").onclick = cargarReferencia;
   $("qa-ref-url").addEventListener("keydown", function (e) { if (e.key === "Enter") cargarReferencia(); });
