@@ -692,7 +692,7 @@
     btn.disabled = false;
   };
 
-/* ---------- Premios ---------- */
+/* ---------- Premios y Acertantes ---------- */
   function pintarPremios() {
     var cont = $("qa-premios");
     cont.innerHTML = "";
@@ -703,29 +703,56 @@
       var matchParentesis = String(esc[i][0]).match(/\((\d+)\)/);
       var numAciertos = matchParentesis ? matchParentesis[1] : (aciertosOrdenados[i - 1] || esc[i][0]);
       
+      // Etiqueta del número de aciertos
       var lab = document.createElement("div"); 
-      lab.textContent = numAciertos + " aciertos (" + esc[i][1] + ")";
+      lab.textContent = numAciertos + " aciertos";
       
-      var inp = document.createElement("input");
-      inp.type = "text"; 
-      inp.setAttribute("data-i", String(i - 1)); 
-      inp.value = esc[i][2] || 0;
+      // Input para el número de acertantes
+      var inpAcertantes = document.createElement("input");
+      inpAcertantes.type = "number";
+      inpAcertantes.placeholder = "Acertantes";
+      inpAcertantes.className = "qa-acertantes-input";
+      inpAcertantes.setAttribute("data-i", String(i - 1));
+      inpAcertantes.value = esc[i][1] || 0;
+
+      // Input para el premio en euros
+      var inpPremio = document.createElement("input");
+      inpPremio.type = "text"; 
+      inpPremio.placeholder = "Premio (€)";
+      inpPremio.className = "qa-premios-input";
+      inpPremio.setAttribute("data-i", String(i - 1)); 
+      inpPremio.value = esc[i][2] || 0;
       
       cont.appendChild(lab); 
-      cont.appendChild(inp);
+      cont.appendChild(inpAcertantes);
+      cont.appendChild(inpPremio);
     }
   }
 
   $("qa-premios-go").onclick = async function () {
-    var vals = [];
-    Array.prototype.forEach.call(document.querySelectorAll("#qa-premios input"), function (i) { vals[parseInt(i.getAttribute("data-i"), 10)] = i.value; });
+    var premios = [];
+    var acertantes = [];
+
+    // Recogemos los valores de ambos inputs
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-premios .qa-premios-input"), function (i) { 
+      premios[parseInt(i.getAttribute("data-i"), 10)] = i.value; 
+    });
+    
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-premios .qa-acertantes-input"), function (i) { 
+      acertantes[parseInt(i.getAttribute("data-i"), 10)] = i.value; 
+    });
+
     var btn = $("qa-premios-go");
     btn.disabled = true;
     setMsg("qa-premios-msg", "Guardando...");
+    
     try {
-      var r = await post({ action: "guardarPremios", premios: vals });
-      setMsg("qa-premios-msg", r.resultado === "ok" ? "✅ Premios guardados" : (r.error || "Error"), r.resultado === "ok" ? "ok" : "err");
-    } catch (e) { setMsg("qa-premios-msg", "Error de conexión", "err"); }
+      // Enviamos tanto los premios como los acertantes al backend
+      var r = await post({ action: "guardarPremios", premios: premios, acertantes: acertantes });
+      setMsg("qa-premios-msg", r.resultado === "ok" ? "✅ Premios y acertantes guardados" : (r.error || "Error"), r.resultado === "ok" ? "ok" : "err");
+    } catch (e) { 
+      setMsg("qa-premios-msg", "Error de conexión", "err"); 
+    }
     btn.disabled = false;
   };
 
