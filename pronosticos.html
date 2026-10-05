@@ -3,35 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pronósticos de la Jornada</title>
+  <title>Pronósticos y aciertos - Quiniela</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: 'Segoe UI', sans-serif; background-color: #e9eff5; margin: 0; padding: 20px; }
     .container { max-width: 1200px; margin: auto; background: #fff; padding: 25px; border-radius: 14px; box-shadow: 0 6px 22px rgba(0,51,102,0.12); }
 
     /* ---------- Cabecera ---------- */
-    .portada { text-align: center; margin-bottom: 18px; }
+    .portada { text-align: center; margin-bottom: 14px; }
     .portada h1 { margin: 0; color: #003366; text-transform: uppercase; letter-spacing: 1px; font-size: 1.7em; }
     .portada p { margin: 6px 0 0; color: #5b7fa6; font-size: 14px; }
-    .barra { height: 5px; border-radius: 3px; margin: 14px auto 0; max-width: 260px; background: linear-gradient(90deg, #218838 0 33.3%, #eab000 33.3% 66.6%, #c82333 66.6% 100%); }
+    .barra { height: 5px; border-radius: 3px; margin: 14px auto 0; max-width: 260px; background: linear-gradient(90deg, #218838 0 50%, #c82333 50% 100%); }
 
-    .leyenda { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin: 16px 0 14px; font-size: 13px; color: #36597f; }
+    .pendientes { text-align: center; margin: 14px auto 0; padding: 10px 14px; max-width: 520px; border-radius: 8px; background: #fff3cd; border: 1px solid #ffe08a; color: #7a5b00; font-weight: bold; font-size: 15px; }
+    .pendientes.fin { background: #d4edda; border-color: #b7dfc2; color: #155724; }
+
+    .leyenda { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin: 16px 0 12px; font-size: 13px; color: #36597f; }
     .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
-    .leyenda .signo { width: 24px; height: 24px; font-size: 13px; }
+    .leyenda .signo, .leyenda .salio { width: 24px; height: 24px; font-size: 13px; border-radius: 6px; }
     .consejo { text-align: center; color: #6c757d; font-size: 12px; margin: 0 0 10px; }
 
     /* ---------- Boleto (tabla) ---------- */
     .boleto { overflow-x: auto; border: 3px solid #003366; border-radius: 12px; background: #fff; -webkit-overflow-scrolling: touch; }
     table { border-collapse: separate; border-spacing: 0; width: 100%; }
 
-    thead th { background: #003366; color: #fff; padding: 10px 6px; text-align: center; font-weight: 600; font-size: 13px; border-left: 1px solid #1a4a80; }
-    thead th:first-child { border-left: 0; text-align: left; padding-left: 14px; text-transform: uppercase; letter-spacing: 1px; font-size: 12px; }
-    thead th.jug { min-width: 74px; }
-    .jug button { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; padding: 2px 0; border-radius: 8px; }
+    thead th { background: #003366; color: #fff; padding: 10px 6px; text-align: center; font-weight: 600; font-size: 13px; border-left: 1px solid #1a4a80; vertical-align: top; }
+    thead th:first-child { border-left: 0; text-align: left; padding-left: 14px; text-transform: uppercase; letter-spacing: 1px; font-size: 12px; vertical-align: middle; }
+    thead th.jug { min-width: 80px; }
+    .jug button { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%; padding: 3px 0; border-radius: 8px; }
     .jug button:hover { background: rgba(255,255,255,.12); }
     .jug button:focus-visible { outline: 2px solid #ffd700; }
     .avatar { width: 32px; height: 32px; border-radius: 50%; background: #0077cc; border: 2px solid #8dbdf0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; text-transform: uppercase; }
-    .jug .nom { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .jug .nom { max-width: 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .pts { display: flex; align-items: baseline; gap: 4px; margin-top: 2px; }
+    .pts b { font-size: 22px; line-height: 1; color: #7be495; }
+    .pts small { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #b9d3ef; font-weight: normal; }
+    .fal { font-size: 11px; color: #ffb3ba; font-weight: normal; }
 
     td { padding: 7px 6px; text-align: center; border-top: 1px solid #dbe7f4; border-left: 1px solid #eef3f9; }
     tbody tr:nth-child(odd) td { background: #ffffff; }
@@ -39,33 +46,44 @@
     tbody tr:hover td { background: #dcecfd !important; }
 
     td.partido, th.partido { position: sticky; left: 0; z-index: 2; }
-    td.partido { text-align: left; min-width: 190px; max-width: 260px; border-left: 0; border-right: 2px solid #b3d7ff; padding: 8px 12px; }
+    td.partido { text-align: left; min-width: 215px; max-width: 280px; border-left: 0; border-right: 2px solid #b3d7ff; padding: 8px 12px; }
     thead th.partido { z-index: 3; }
     .pt { display: flex; align-items: center; gap: 10px; }
     .num { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #0077cc; color: #0077cc; background: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; }
     .eq { flex: 1; min-width: 0; line-height: 1.25; font-size: 13px; font-weight: 600; color: #003366; }
     .eq span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .eq .vs { font-size: 10px; font-weight: normal; color: #7a97b8; letter-spacing: 1px; }
-    .res { flex: none; font-size: 12px; font-weight: bold; color: #003366; background: #e3f2fd; border: 1px solid #b3d7ff; border-radius: 6px; padding: 2px 7px; }
-    .res.pleno { background: #fff3cd; border-color: #ffe08a; color: #7a5b00; }
 
-    /* ---------- Las apuestas ---------- */
-    .signo { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; font-weight: 800; font-size: 17px; color: #fff; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
-    .s1 { background: #218838; }
-    .sX { background: #eab000; color: #2b2b2b; }
-    .s2 { background: #c82333; }
+    /* Lo que ha salido (primera columna) */
+    .salio { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 6px; border-radius: 8px; background: #003366; color: #fff; font-weight: 800; font-size: 17px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.35); }
+    .salio.pleno { color: #ffd700; letter-spacing: 1px; font-size: 14px; padding: 0 9px; }
+    .salio.nada { background: #fff; color: #9fb3c8; border: 2px dashed #c3d3e4; box-shadow: none; font-weight: normal; }
+
+    /* ---------- Las apuestas: verde = acierto, rojo = fallo, azul claro = sin resultado ---------- */
+    .signo, .marcador { display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 800; }
+    .signo { width: 34px; height: 34px; font-size: 17px; }
+    .marcador { padding: 5px 9px; font-size: 14px; letter-spacing: 1px; }
+    .ok   { background: #218838; color: #fff; box-shadow: inset 0 -3px 0 rgba(0,0,0,.2); }
+    .fail { background: #c82333; color: #fff; box-shadow: inset 0 -3px 0 rgba(0,0,0,.2); }
+    .pend { background: #e3f2fd; color: #36597f; border: 1px solid #b3d7ff; }
     .vacio { color: #b9c7d8; font-size: 18px; }
-    .marcador { display: inline-block; padding: 5px 9px; border-radius: 8px; background: #003366; color: #ffd700; font-weight: bold; font-size: 14px; letter-spacing: 1px; }
 
     /* Fila del pleno al 15 */
     tbody tr.pleno td { border-top: 3px double #d4a800; }
     tbody tr.pleno td.partido .num { border-color: #d4a800; color: #856404; background: #fff8e0; font-size: 11px; }
+
+    /* Fila de totales */
+    tfoot td { background: #003366 !important; color: #fff; border-top: 3px solid #003366; border-left: 1px solid #1a4a80; font-weight: bold; padding: 9px 6px; }
+    tfoot td.partido { color: #fff; text-transform: uppercase; letter-spacing: 1px; font-size: 12px; border-right: 2px solid #1a4a80; }
+    tfoot .tot { font-size: 20px; color: #7be495; }
+    tfoot .tot small { font-size: 11px; color: #b9d3ef; font-weight: normal; }
 
     /* Resaltar a un jugador al pulsar su nombre */
     .boleto.enfoque td.col, .boleto.enfoque th.jug { opacity: .35; transition: opacity .15s; }
     .boleto.enfoque td.col.sel, .boleto.enfoque th.jug.sel { opacity: 1; }
     .boleto.enfoque td.col.sel { background: #fff7cf !important; box-shadow: inset 2px 0 0 #ffd700, inset -2px 0 0 #ffd700; }
     .boleto.enfoque th.jug.sel { background: #0b5ea8; }
+    .boleto.enfoque tfoot td.col.sel { background: #0b5ea8 !important; box-shadow: none; }
 
     .msg { text-align: center; padding: 30px; color: #555; }
     .btn-volver { display: inline-block; margin-top: 25px; background: #0077cc; color: white !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; }
@@ -73,23 +91,27 @@
 
     @media (max-width: 640px) {
       body { padding: 8px; } .container { padding: 14px; border-radius: 10px; }
-      td.partido { min-width: 150px; padding: 6px 8px; } .eq { font-size: 12px; } .num { width: 24px; height: 24px; font-size: 12px; }
-      .signo { width: 30px; height: 30px; font-size: 15px; } thead th.jug { min-width: 62px; }
+      td.partido { min-width: 148px; max-width: 148px; padding: 6px 6px; } .pt { gap: 5px; } .eq { font-size: 11px; } .eq .vs { display: none; }
+      .num { width: 20px; height: 20px; font-size: 10px; border-width: 1.5px; }
+      .signo { width: 30px; height: 30px; font-size: 15px; } .salio { min-width: 28px; height: 28px; font-size: 14px; padding: 0 4px; } .salio.pleno { font-size: 11px; padding: 0 5px; }
+      thead th.partido { font-size: 10px; padding-left: 8px; } thead th.jug { min-width: 70px; } .pts b { font-size: 19px; }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="portada">
-      <h1>Pronósticos de la Jornada</h1>
+      <h1>Pronósticos y aciertos</h1>
       <p id="resumen">Cargando apuestas...</p>
       <div class="barra"></div>
+      <div id="pendientes" class="pendientes" style="display:none"></div>
     </div>
 
     <div class="leyenda">
-      <span><i class="signo s1">1</i> Gana el local</span>
-      <span><i class="signo sX">X</i> Empate</span>
-      <span><i class="signo s2">2</i> Gana el visitante</span>
+      <span><i class="salio">1</i> Lo que ha salido</span>
+      <span><i class="signo ok">1</i> Acertado</span>
+      <span><i class="signo fail">2</i> Fallado</span>
+      <span><i class="signo pend">X</i> Sin resultado</span>
     </div>
     <p class="consejo">Pulsa el nombre de un jugador para resaltar sus apuestas</p>
 
@@ -97,6 +119,7 @@
       <table id="tablaPronosticos">
         <thead><tr id="headerRow"></tr></thead>
         <tbody></tbody>
+        <tfoot></tfoot>
       </table>
     </div>
 
@@ -106,13 +129,18 @@
   <script>
     const API_URL = "/api";
 
+    const norm = v => (v === null || v === undefined) ? "" : String(v).trim().toUpperCase();
+    const normPleno = v => norm(v).replace(/\s/g, "");                 // "2 - 1" -> "2-1"
+    const esResultado = v => v === "1" || v === "X" || v === "2";
+    const esPleno = v => /^[0-2M]-[0-2M]$/.test(v);
+    const equipo = t => String(t == null ? "" : t).replace(/\s*\(.*$/, "").trim();   // quita "(M) (15º)"
+
     function el(tag, cls, txt) {
       const e = document.createElement(tag);
       if (cls) e.className = cls;
       if (txt !== undefined) e.textContent = txt;
       return e;
     }
-    const equipo = t => String(t == null ? "" : t).replace(/\s*\(.*$/, "").trim();   // quita "(M) (15º)"
 
     // Limpieza de fechas ISO por si acaso (igual que antes)
     function limpiar(v) {
@@ -121,28 +149,35 @@
       return val.toString().trim();
     }
 
-    // Celda con la apuesta: 1 / X / 2 como cuadradito de color
-    function celdaApuesta(valor, esPleno) {
+    // Celda de un jugador: la apuesta, en verde si acertó, en rojo si falló, neutra si aún no hay resultado
+    function celdaApuesta(apuesta, salio, esPlenoFila) {
       const td = el("td", "col");
-      if (!valor) { td.appendChild(el("span", "vacio", "–")); return td; }
-      const v = valor.toUpperCase();
-      if (esPleno) { td.appendChild(el("span", "marcador", valor.replace(/\s/g, ""))); return td; }
-      const cls = v === "1" ? "s1" : v === "X" ? "sX" : v === "2" ? "s2" : "";
-      td.appendChild(el("span", cls ? "signo " + cls : "marcador", v));
+      const a = esPlenoFila ? normPleno(apuesta) : norm(apuesta);
+      if (esPlenoFila) {
+        if (!a) { td.appendChild(el("span", "vacio", "–")); return td; }
+        const est = salio ? (a === salio ? "ok" : "fail") : "pend";
+        td.appendChild(el("span", "marcador " + est, a));
+        return td;
+      }
+      const est = !salio ? "pend" : (a === salio ? "ok" : "fail");
+      td.appendChild(el("span", "signo " + est, a || "–"));
       return td;
     }
 
-    function celdaPartido(num, local, visitante, resultado, esPleno) {
+    // Primera columna: número, equipos y lo que ha salido
+    function celdaPartido(num, local, visitante, salio, esPlenoFila) {
       const td = el("td", "partido");
       const pt = el("div", "pt");
-      pt.appendChild(el("div", "num", esPleno ? "15" : String(num)));
+      pt.appendChild(el("div", "num", String(num)));
       const eq = el("div", "eq");
-      eq.appendChild(el("span", "", esPleno ? "🔥 " + local : local));
+      eq.appendChild(el("span", "", esPlenoFila ? "🔥 " + local : local));
       eq.appendChild(el("span", "vs", "VS"));
       eq.appendChild(el("span", "", visitante));
       eq.title = local + " – " + visitante;
       pt.appendChild(eq);
-      if (resultado) pt.appendChild(el("div", "res" + (esPleno ? " pleno" : ""), resultado));
+      const s = el("div", "salio" + (esPlenoFila ? " pleno" : "") + (salio ? "" : " nada"), salio || "…");
+      s.title = salio ? "Ha salido " + salio : "Todavía sin resultado";
+      pt.appendChild(s);
       td.appendChild(pt);
       return td;
     }
@@ -159,32 +194,69 @@
           return;
         }
 
-        // Jugadores = filas con nombre (la fila 0 es la cabecera)
-        const jugadores = filas.slice(1).filter(f => f && f[0] !== null && f[0] !== undefined && String(f[0]).trim() !== "");
+        // Lo que ha salido en cada partido (columna D del Sheet); "" si todavía no hay resultado
+        const salio = [];
+        let total = 0, pendientes = 0;
+        for (let i = 1; i <= 14; i++) {
+          const p = partidos[i];
+          const r = p ? norm(p[3]) : "";
+          salio[i] = esResultado(r) ? r : "";
+          if (p) { total++; if (!salio[i]) pendientes++; }
+        }
+        const salio15 = partidos[15] && esPleno(normPleno(partidos[15][3])) ? normPleno(partidos[15][3]) : "";
+
+        // Jugadores = filas con nombre (la fila 0 es la cabecera) + sus aciertos y fallos
+        const jugadores = filas.slice(1)
+          .filter(f => f && f[0] !== null && f[0] !== undefined && String(f[0]).trim() !== "")
+          .map(f => {
+            const j = { nombre: limpiar(f[0]), ap: [], ok: 0, fail: 0 };
+            for (let i = 1; i <= 15; i++) j.ap[i] = limpiar(f[i]);
+            for (let i = 1; i <= 14; i++) {
+              if (!salio[i]) continue;
+              if (norm(j.ap[i]) === salio[i]) j.ok++; else j.fail++;
+            }
+            return j;
+          });
+        jugadores.sort((a, b) => b.ok - a.ok);          // el que más aciertos lleva, primero (empates: orden del Sheet)
+
         document.getElementById("resumen").textContent = jugadores.length + (jugadores.length === 1 ? " jugador" : " jugadores") + " · 14 partidos + pleno al 15";
 
-        // 1) Cabecera: "Partido" + un botón por jugador
+        // Cuántos partidos faltan por salir (sobre los 14)
+        const aviso = document.getElementById("pendientes");
+        if (total) {
+          aviso.style.display = "block";
+          aviso.classList.toggle("fin", pendientes === 0);
+          aviso.textContent = pendientes === 0
+            ? "Jornada terminada: los " + total + " partidos ya han salido"
+            : (pendientes === 1 ? "Queda 1 de " + total + " partidos por salir" : "Quedan " + pendientes + " de " + total + " partidos por salir");
+        }
+
+        // 1) Cabecera: "Partido / Salió" + un botón por jugador con sus aciertos
         const header = document.getElementById("headerRow");
         header.innerHTML = "";
-        header.appendChild(el("th", "partido", "Partido"));
+        header.appendChild(el("th", "partido", "Partido · Salió"));
         const boleto = document.getElementById("boleto");
         let seleccionado = -1;
-        jugadores.forEach((f, j) => {
-          const nombre = limpiar(f[0]);
+        jugadores.forEach((j, idx) => {
           const th = el("th", "jug");
           const b = el("button");
           b.type = "button";
-          b.title = "Resaltar a " + nombre;
-          b.appendChild(el("div", "avatar", nombre.charAt(0) || "?"));
-          b.appendChild(el("div", "nom", nombre));
+          b.title = "Resaltar a " + j.nombre;
+          b.appendChild(el("div", "avatar", j.nombre.charAt(0) || "?"));
+          b.appendChild(el("div", "nom", j.nombre));
+          const pts = el("div", "pts");
+          pts.appendChild(el("b", "", String(j.ok)));
+          pts.appendChild(el("small", "", j.ok === 1 ? "acierto" : "aciertos"));
+          b.appendChild(pts);
+          b.appendChild(el("div", "fal", j.fail + (j.fail === 1 ? " fallo" : " fallos")));
           b.addEventListener("click", () => {
-            seleccionado = (seleccionado === j) ? -1 : j;
+            seleccionado = (seleccionado === idx) ? -1 : idx;
             boleto.classList.toggle("enfoque", seleccionado !== -1);
             document.querySelectorAll("#tablaPronosticos .jug, #tablaPronosticos td.col").forEach(c => {
               c.classList.toggle("sel", Number(c.getAttribute("data-j")) === seleccionado);
             });
           });
-          th.setAttribute("data-j", String(j));
+          th.setAttribute("data-j", String(idx));
           th.appendChild(b);
           header.appendChild(th);
         });
@@ -193,21 +265,33 @@
         tbody.innerHTML = "";
         for (let i = 1; i <= 15; i++) {
           const p = partidos[i];
-          const esPleno = i === 15;
+          const esPlenoFila = i === 15;
           const local = p ? equipo(p[1]) : "Partido " + i;
           const visitante = p ? equipo(p[2]) : "";
-          const r = p && p[3] !== null && p[3] !== undefined ? String(p[3]).trim().replace(/\s/g, "") : "";
-          const resultado = (r && r !== "-") ? r : "";
-
-          const tr = el("tr", esPleno ? "pleno" : "");
-          tr.appendChild(celdaPartido(i, local, visitante, resultado, esPleno));
-          jugadores.forEach((f, j) => {
-            const td = celdaApuesta(limpiar(f[i]), esPleno);
-            td.setAttribute("data-j", String(j));
+          const tr = el("tr", esPlenoFila ? "pleno" : "");
+          tr.appendChild(celdaPartido(i, local, visitante, esPlenoFila ? salio15 : salio[i], esPlenoFila));
+          jugadores.forEach((j, idx) => {
+            const td = celdaApuesta(j.ap[i], esPlenoFila ? salio15 : salio[i], esPlenoFila);
+            td.setAttribute("data-j", String(idx));
             tr.appendChild(td);
           });
           tbody.appendChild(tr);
         }
+
+        // 3) Pie: total de aciertos de cada jugador
+        const tfoot = document.querySelector("#tablaPronosticos tfoot");
+        tfoot.innerHTML = "";
+        const trf = el("tr");
+        trf.appendChild(el("td", "partido", "Total aciertos"));
+        jugadores.forEach((j, idx) => {
+          const td = el("td", "col");
+          const t = el("span", "tot", String(j.ok));
+          t.appendChild(el("small", "", " / 14"));
+          td.appendChild(t);
+          td.setAttribute("data-j", String(idx));
+          trf.appendChild(td);
+        });
+        tfoot.appendChild(trf);
       } catch (e) {
         console.error("Error al cargar la tabla:", e);
         document.getElementById("resumen").textContent = "";
