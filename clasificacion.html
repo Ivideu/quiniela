@@ -5,75 +5,186 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clasificación - Quiniela</title>
   <style>
+    * { box-sizing: border-box; }
     body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; align-items: flex-start; }
     .container { max-width: 600px; width: 100%; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-    h1 { text-align: center; margin-bottom: 25px; color: #333; }
-    table { width: 100%; border-collapse: collapse; border: 2px solid #0077cc; margin-top: 10px; }
-    th, td { padding: 12px; border: 1px solid #dee2e6; text-align: center; }
-    th { background-color: #0077cc; color: white; text-transform: uppercase; font-weight: bold; }
+    h1 { text-align: center; margin-bottom: 8px; color: #333; }
+    .sub { text-align: center; color: #6c757d; font-size: 14px; margin: 0 0 22px; }
 
-    /* ESTILO CEBRA CON AZUL RESALTADO #b1d4fd */
-    tr:nth-child(odd) { background-color: #ffffff; }
-    tr:nth-child(even) { background-color: #b1d4fd; } 
-    tr:hover { background-color: #8dbdf0 !important; transition: 0.1s; }
+    /* ---------- Un desplegable por jugador ---------- */
+    .jugador { border: 2px solid #0077cc; border-radius: 10px; margin-bottom: 10px; overflow: hidden; background: #fff; }
+    .jugador:nth-child(even) > summary { background-color: #b1d4fd; }   /* cebra, como antes */
+    .jugador > summary {
+      list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; background: #fff; font-weight: bold; color: #003366; user-select: none;
+    }
+    .jugador > summary::-webkit-details-marker { display: none; }
+    .jugador > summary:hover { background-color: #8dbdf0 !important; transition: .1s; }
+    .jugador > summary:focus-visible { outline: 3px solid #003366; outline-offset: -3px; }
+    .flecha { transition: transform .2s; color: #0077cc; font-size: 14px; }
+    .jugador[open] .flecha { transform: rotate(90deg); }
+    .nombre { flex: 1; text-align: left; font-size: 1.05em; }
+    .aciertos { color: #0077cc; font-size: 1.25em; min-width: 2ch; text-align: right; }
+    .aciertos small { font-size: .6em; color: #5b7fa6; font-weight: normal; margin-left: 4px; text-transform: uppercase; letter-spacing: .5px; }
 
-    td:first-child { font-weight: bold; text-align: left; padding-left: 20px; }
-    td:last-child { font-weight: bold; color: #0077cc; font-size: 1.1em; }
+    /* ---------- Boleto del jugador: 2 columnas ---------- */
+    .boleto { border-top: 2px solid #0077cc; background: #fbfdff; }
+    .boleto table { width: 100%; border-collapse: collapse; }
+    .boleto th { background: #0077cc; color: #fff; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; padding: 8px; width: 50%; }
+    .boleto td { text-align: center; padding: 0; border: 0; }
+    .boleto tr.partido td { background: #eaf3fc; color: #36597f; font-size: 12px; font-weight: bold; padding: 6px 10px 5px; text-align: left; border-top: 1px solid #cfe2f7; }
+    .boleto tr.partido td b { color: #0077cc; margin-right: 6px; }
+    .celdas td { width: 50%; font-size: 20px; font-weight: bold; padding: 8px; border-left: 1px solid #dee2e6; }
+    .celdas td:first-child { border-left: 0; }
+
+    /* Verde = acertado · Rojo = fallado · Gris = todavía sin resultado */
+    .celdas.ok td   { background: #d4edda; color: #155724; }
+    .celdas.fail td { background: #f8d7da; color: #721c24; }
+    .celdas.pend td { background: #fff; color: #6c757d; }
+    .celdas.ok td:last-child::after   { content: " ✔"; font-size: 15px; }
+    .celdas.fail td:last-child::after { content: " ✘"; font-size: 15px; }
+
+    .pleno-tit td { background: #fff3cd !important; color: #856404 !important; border-top: 2px solid #ffd700 !important; }
+    .resumen { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; padding: 10px; font-size: 13px; font-weight: bold; background: #fff; border-top: 1px solid #dee2e6; }
+    .resumen .v { color: #155724; } .resumen .r { color: #721c24; } .resumen .p { color: #6c757d; }
+    .vacio { padding: 16px; text-align: center; color: #6c757d; font-size: 14px; }
+
+    .leyenda { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin: 0 0 18px; font-size: 13px; color: #444; }
+    .leyenda span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid rgba(0,0,0,.15); }
+    .leyenda .l-ok::before { background: #d4edda; } .leyenda .l-fail::before { background: #f8d7da; } .leyenda .l-pend::before { background: #fff; }
 
     .btn-volver { display: block; margin-top: 25px; text-decoration: none; background: #0077cc; color: white !important; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; }
     .btn-volver:hover { background: #005fa3; }
+    .msg { text-align: center; color: #555; padding: 16px; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Clasificación de aciertos</h1>
-    <table>
-      <thead>
-        <tr>
-          <th>JUGADOR</th>
-          <th>ACIERTOS</th>
-        </tr>
-      </thead>
-      <tbody id="tablaClasificacion">
-        <tr><td colspan="2">Cargando clasificación en tiempo real...</td></tr>
-      </tbody>
-    </table>
+    <p class="sub">Pulsa un nombre para ver su quiniela</p>
+    <div class="leyenda"><span class="l-ok">Acertado</span><span class="l-fail">Fallado</span><span class="l-pend">Sin resultado</span></div>
+
+    <div id="listaJugadores"><div class="msg">Cargando clasificación en tiempo real...</div></div>
+
     <a class="btn-volver" href="index.html">⬅ Volver a inicio</a>
   </div>
 
   <script>
-    // IMPORTANTE: Asegúrate de que esta URL sea la de tu Web App de Apps Script
-    const API_URL = "/api"; 
+    const API_URL = "/api";
+
+    const norm = v => (v === null || v === undefined) ? "" : String(v).trim().toUpperCase();
+    const clave = v => norm(v).toLowerCase();
+    const normPleno = v => norm(v).replace(/\s/g, "");                 // "2 - 1" -> "2-1"
+    const esResultado = v => v === "1" || v === "X" || v === "2";
+    const esPleno = v => /^[0-2M]-[0-2M]$/.test(v);
+    const equipo = t => String(t == null ? "" : t).replace(/\s*\(.*$/, "").trim();   // quita "(M) (15º)"
+
+    function el(tag, cls, txt) {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (txt !== undefined) e.textContent = txt;
+      return e;
+    }
+
+    // Una fila de la quiniela: línea con el partido + línea con [apuesta | resultado]
+    function filaPartido(tbody, etiqueta, nombrePartido, apuesta, resultado, estado) {
+      const t1 = el("tr", "partido");
+      const c = el("td"); c.colSpan = 2;
+      c.appendChild(el("b", "", etiqueta));
+      c.appendChild(document.createTextNode(nombrePartido));
+      t1.appendChild(c);
+      const t2 = el("tr", "celdas " + estado);
+      t2.appendChild(el("td", "", apuesta || "—"));
+      t2.appendChild(el("td", "", resultado || "—"));
+      tbody.append(t1, t2);
+    }
+
+    function construirBoleto(fila, partidos) {
+      const caja = el("div", "boleto");
+      if (!fila) { caja.appendChild(el("div", "vacio", "Este jugador todavía no tiene quiniela enviada.")); return caja; }
+
+      const tabla = el("table");
+      const thead = el("thead"), trh = el("tr");
+      trh.append(el("th", "", "Su apuesta"), el("th", "", "Resultado"));
+      thead.appendChild(trh); tabla.appendChild(thead);
+      const tbody = el("tbody"); tabla.appendChild(tbody);
+
+      let ok = 0, fail = 0, pend = 0;
+      for (let i = 1; i <= 14; i++) {
+        const p = partidos[i];
+        if (!p) continue;
+        const apuesta = norm(fila[i]);
+        const res = norm(p[3]);
+        let estado = "pend";
+        if (esResultado(res)) {
+          if (apuesta === res) { estado = "ok"; ok++; } else { estado = "fail"; fail++; }
+        } else { pend++; }
+        filaPartido(tbody, String(p[0] || i), equipo(p[1]) + " – " + equipo(p[2]), apuesta, esResultado(res) ? res : "", estado);
+      }
+
+      // Pleno al 15: solo lo rellena el jugador especial de la semana
+      const apuesta15 = normPleno(fila[15]);
+      const p15 = partidos[15];
+      if (apuesta15 && p15) {
+        const res15 = normPleno(p15[3]);
+        let estado = "pend";
+        if (esPleno(res15)) estado = (apuesta15 === res15) ? "ok" : "fail";
+        const t0 = el("tr", "partido pleno-tit"); const c0 = el("td", "", "🔥 PLENO AL 15 · " + equipo(p15[1]) + " – " + equipo(p15[2])); c0.colSpan = 2;
+        t0.appendChild(c0); tbody.appendChild(t0);
+        const t2 = el("tr", "celdas " + estado);
+        t2.append(el("td", "", apuesta15), el("td", "", esPleno(res15) ? res15 : "—"));
+        tbody.appendChild(t2);
+      }
+
+      caja.appendChild(tabla);
+      const resumen = el("div", "resumen");
+      resumen.append(el("span", "v", "✔ " + ok + " acertados"), el("span", "r", "✘ " + fail + " fallados"), el("span", "p", "… " + pend + " sin resultado"));
+      caja.appendChild(resumen);
+      return caja;
+    }
 
     async function cargarClasificacion() {
+      const cont = document.getElementById("listaJugadores");
       try {
-        const res = await fetch(API_URL);
+        const res = await fetch(API_URL + "?t=" + Date.now(), { cache: "no-store" });
         const data = await res.json();
-        
-        // Leemos la clave 'clasificacion' del JSON
         const lista = data.clasificacion;
-        const tbody = document.getElementById("tablaClasificacion");
-        tbody.innerHTML = ""; 
+        const pronos = data.pronosticos || [];
+        const partidos = data.partidos || [];
+        cont.innerHTML = "";
 
         if (!lista || lista.length <= 1) {
-          tbody.innerHTML = "<tr><td colspan='2'>No hay datos disponibles en el Excel</td></tr>";
+          cont.appendChild(el("div", "msg", "No hay datos disponibles en el Excel"));
           return;
         }
 
-        // Saltamos fila 0 (Nombre/Aciertos) y recorremos los jugadores
+        // Pronósticos de cada jugador, buscados por nombre
+        const porNombre = {};
+        pronos.slice(1).forEach(f => { if (clave(f[0])) porNombre[clave(f[0])] = f; });
+
         lista.slice(1).forEach(fila => {
           const nombre = fila[0];
-          const aciertos = fila[1];
-          
-          if (nombre && nombre.toString().trim() !== "") {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${nombre}</td><td>${aciertos || 0}</td>`;
-            tbody.appendChild(tr);
-          }
+          if (!nombre || nombre.toString().trim() === "") return;
+
+          const det = el("details", "jugador");
+          const sum = el("summary");
+          sum.appendChild(el("span", "flecha", "▶"));
+          sum.appendChild(el("span", "nombre", nombre));
+          const ac = el("span", "aciertos", String(fila[1] || 0));
+          ac.appendChild(el("small", "", "aciertos"));
+          sum.appendChild(ac);
+          det.appendChild(sum);
+
+          // El boleto se construye al abrir (más ligero y siempre con lo último cargado)
+          det.addEventListener("toggle", () => {
+            if (det.open && !det.querySelector(".boleto")) det.appendChild(construirBoleto(porNombre[clave(nombre)], partidos));
+          });
+          cont.appendChild(det);
         });
       } catch (error) {
         console.error("Error:", error);
-        document.getElementById("tablaClasificacion").innerHTML = "<tr><td colspan='2'>Error de conexión. Revisa la consola.</td></tr>";
+        cont.innerHTML = "";
+        cont.appendChild(el("div", "msg", "Error de conexión. Revisa la consola."));
       }
     }
     cargarClasificacion();
