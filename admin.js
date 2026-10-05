@@ -98,8 +98,7 @@
     ".qa-gl{display:grid;grid-template-columns:1fr auto 64px auto;gap:6px;align-items:center;margin-bottom:6px;font-size:14px}",
     "#qa-box button.qa-mas{width:38px;height:38px;margin:0;padding:0;font-size:20px;line-height:1}",
     "#qa-box .qa-gl input[type=text]{text-align:center;padding:8px 4px}",
-    ".qa-prem{display:grid;grid-template-columns:1fr 110px;gap:6px 10px;align-items:center;font-size:14px}"
-  ].join("\n");
+    ".qa-prem{display:flex;flex-direction:column;gap:10px;font-size:14px}"  ].join("\n");
   var styleEl = document.createElement("style");
   styleEl.textContent = css;
   document.head.appendChild(styleEl);
@@ -703,37 +702,47 @@
       var matchParentesis = String(esc[i][0]).match(/\((\d+)\)/);
       var numAciertos = matchParentesis ? matchParentesis[1] : (aciertosOrdenados[i - 1] || esc[i][0]);
 
-      // Fila contenedora para mantener alineada la etiqueta y los 2 inputs
+      // Fila independiente por categoría (en una sola columna vertical)
       var fila = document.createElement("div");
       fila.style.display = "grid";
-      fila.style.gridTemplateColumns = "110px 1fr 1fr";
-      fila.style.gap = "8px";
+      fila.style.gridTemplateColumns = "100px 1fr 1fr";
+      fila.style.gap = "10px";
       fila.style.alignItems = "center";
-      fila.style.marginBottom = "8px";
 
       // Etiqueta (ej: 15 aciertos)
       var lab = document.createElement("div"); 
       lab.textContent = numAciertos + " aciertos";
-      lab.style.fontSize = "13px";
+      lab.style.fontSize = "14px";
       lab.style.fontWeight = "600";
+      lab.style.color = "#333";
 
-      // Input para número de acertantes
+      // Input para Acertantes (mismo estilo que la casilla de dinero)
       var inpAcertantes = document.createElement("input");
       inpAcertantes.type = "number";
       inpAcertantes.placeholder = "Acertantes";
       inpAcertantes.className = "qa-acertantes-input";
       inpAcertantes.setAttribute("data-i", String(i - 1));
       inpAcertantes.value = esc[i][1] != null ? esc[i][1] : 0;
-      inpAcertantes.style.padding = "6px 8px";
+      inpAcertantes.style.width = "100%";
+      inpAcertantes.style.padding = "8px 10px";
+      inpAcertantes.style.border = "2px solid #b3d7ff";
+      inpAcertantes.style.borderRadius = "8px";
+      inpAcertantes.style.fontSize = "15px";
+      inpAcertantes.style.background = "#f8fbff";
 
-      // Input para el importe del premio en €
+      // Input para Premio (€) (mismo estilo que la casilla de dinero)
       var inpPremio = document.createElement("input");
       inpPremio.type = "text"; 
       inpPremio.placeholder = "Premio (€)";
       inpPremio.className = "qa-premios-input";
       inpPremio.setAttribute("data-i", String(i - 1)); 
       inpPremio.value = esc[i][2] != null ? esc[i][2] : 0;
-      inpPremio.style.padding = "6px 8px";
+      inpPremio.style.width = "100%";
+      inpPremio.style.padding = "8px 10px";
+      inpPremio.style.border = "2px solid #b3d7ff";
+      inpPremio.style.borderRadius = "8px";
+      inpPremio.style.fontSize = "15px";
+      inpPremio.style.background = "#f8fbff";
 
       fila.appendChild(lab);
       fila.appendChild(inpAcertantes);
