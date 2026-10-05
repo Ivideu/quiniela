@@ -31,6 +31,36 @@
       text-transform: uppercase;
     }
     
+    /* BOTÓN VOLVER CON EL MISMO ESTILO QUE ENVIAR PRONÓSTICO */
+    .btn-volver {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+      color: #ffffff;
+      text-decoration: none;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 16px;
+      box-shadow: 0 4px 6px rgba(0, 86, 179, 0.25);
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      box-sizing: border-box;
+      margin-bottom: 25px;
+    }
+    .btn-volver:hover {
+      background: linear-gradient(135deg, #004085 0%, #002752 100%);
+      box-shadow: 0 6px 12px rgba(0, 86, 179, 0.35);
+      transform: translateY(-2px);
+    }
+    .btn-volver:active {
+      transform: translateY(1px);
+    }
+
     /* TARJETA DE PARTIDO */
     .match-card {
       margin-bottom: 30px;
@@ -55,7 +85,7 @@
 
     label { display: block; margin-bottom: 8px; font-weight: bold; color: #003366; }
     
-    /* BLOQUES DE PROBABILIDAD (Columnas F, G, H) */
+    /* BLOQUES DE PROBABILIDAD */
     .prob-box { display: flex; gap: 8px; margin-bottom: 15px; }
     .prob-item { 
       flex: 1; 
@@ -71,7 +101,7 @@
     .prob-x { background-color: #eab000; color: #000; } 
     .prob-2 { background-color: #c82333; } 
 
-    /* ANÁLISIS IA (Columna I) */
+    /* ANÁLISIS IA */
     .recomendacion { 
       background-color: #e3f2fd; 
       border-left: 6px solid #0056b3; 
@@ -96,7 +126,7 @@
     button { 
       width: 100%; 
       padding: 16px; 
-      background: #0056b3; 
+      background: linear-gradient(135deg, #0056b3 0%, #004085 100%); 
       color: white; 
       border: none; 
       border-radius: 10px; 
@@ -104,12 +134,16 @@
       cursor: pointer; 
       font-size: 18px; 
       font-weight: bold; 
-      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0, 86, 179, 0.25);
+      transition: all 0.2s ease-in-out;
     }
     button:hover { 
-      background: #003d80; 
-      box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
+      background: linear-gradient(135deg, #004085 0%, #002752 100%); 
+      box-shadow: 0 6px 12px rgba(0, 86, 179, 0.35);
       transform: translateY(-2px); 
+    }
+    button:active {
+      transform: translateY(1px);
     }
 
     #extra-match { 
@@ -125,11 +159,11 @@
 <body>
   <div class="container">
     <h1>Tu Quiniela</h1>
+    
+    <!-- Botón para volver al menú principal -->
+    <a href="index.html" class="btn-volver">← Volver al menú</a>
+
     <form id="quinielaForm">
-      <!-- Botón para volver al menú principal -->
-<div class="button">
-  <a href="index.html" class="btn-volver">← Volver al menú</a>
-</div>
       <div style="margin-bottom: 30px;">
         <label>👤 Selecciona tu nombre:</label>
         <select id="nombre" name="nombre" required>
@@ -159,19 +193,28 @@
       return val.toString().includes('%') ? val : val + "%";
     }
 
-    // Pinta la lista de nombres (con ⭐ en el usuario especial) y muestra/oculta el pleno al 15
+    // Pinta la lista de nombres buscando primero en clasificacion o pronosticos
     function pintarNombres() {
       const selN = document.getElementById("nombre");
       const actual = selN.value;
       selN.innerHTML = '<option value="">Elige tu nombre</option>';
-      DATOS.pronosticos.slice(1).forEach(f => {
-        if (f[0]) {
-          const opt = document.createElement("option");
-          opt.value = f[0];
-          opt.textContent = (f[0] === USUARIO_ESPECIAL) ? f[0] + " ⭐" : f[0];
-          selN.appendChild(opt);
-        }
-      });
+      
+      // Busca la lista de usuarios en Clasificación o Pronósticos
+      const listaUsuarios = (DATOS.clasificacion && DATOS.clasificacion.length > 1) 
+        ? DATOS.clasificacion 
+        : DATOS.pronosticos;
+
+      if (listaUsuarios && listaUsuarios.length > 1) {
+        listaUsuarios.slice(1).forEach(f => {
+          if (f[0]) {
+            const opt = document.createElement("option");
+            opt.value = f[0];
+            opt.textContent = (f[0] === USUARIO_ESPECIAL) ? f[0] + " ⭐" : f[0];
+            selN.appendChild(opt);
+          }
+        });
+      }
+      
       selN.value = actual;
       document.getElementById("extra-match").style.display =
         (selN.value && selN.value === USUARIO_ESPECIAL) ? "block" : "none";
@@ -217,7 +260,9 @@
 
         pintarNombres();
 
-        document.getElementById("labelP15").innerHTML = `<b>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</b>`;
+        if (data.datosPartido15) {
+          document.getElementById("labelP15").innerHTML = `<b>🔥 PLENO AL 15: ${data.datosPartido15.local} vs ${data.datosPartido15.visitante}</b>`;
+        }
         const p15 = document.getElementById("p15");
         const scores = ["0","1","2","M"];
         p15.innerHTML = '<option value="">Marcador exacto</option>';
@@ -235,7 +280,6 @@
       document.getElementById("extra-match").style.display = (this.value === USUARIO_ESPECIAL) ? "block" : "none";
     });
 
-    // Cuando el menú admin rota el usuario especial, se repinta la ⭐ sin recargar
     window.addEventListener("quiniela:especial", function(e) {
       if (!DATOS) return;
       USUARIO_ESPECIAL = e.detail.usuario;
