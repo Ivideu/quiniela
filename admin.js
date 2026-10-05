@@ -692,18 +692,30 @@
     btn.disabled = false;
   };
 
-  /* ---------- Premios ---------- */
+/* ---------- Premios ---------- */
   function pintarPremios() {
     var cont = $("qa-premios");
     cont.innerHTML = "";
     var esc = (DATA && DATA.escrutinio) || [];
+    var aciertosOrdenados = [15, 14, 13, 12, 11, 10];
+    
     for (var i = 1; i < esc.length; i++) {
-      var lab = document.createElement("div"); lab.textContent = esc[i][0] + " (" + esc[i][1] + ")";
+      var matchParentesis = String(esc[i][0]).match(/\((\d+)\)/);
+      var numAciertos = matchParentesis ? matchParentesis[1] : (aciertosOrdenados[i - 1] || esc[i][0]);
+      
+      var lab = document.createElement("div"); 
+      lab.textContent = numAciertos + " aciertos (" + esc[i][1] + ")";
+      
       var inp = document.createElement("input");
-      inp.type = "text"; inp.setAttribute("data-i", String(i - 1)); inp.value = esc[i][2] || 0;
-      cont.appendChild(lab); cont.appendChild(inp);
+      inp.type = "text"; 
+      inp.setAttribute("data-i", String(i - 1)); 
+      inp.value = esc[i][2] || 0;
+      
+      cont.appendChild(lab); 
+      cont.appendChild(inp);
     }
   }
+
   $("qa-premios-go").onclick = async function () {
     var vals = [];
     Array.prototype.forEach.call(document.querySelectorAll("#qa-premios input"), function (i) { vals[parseInt(i.getAttribute("data-i"), 10)] = i.value; });
