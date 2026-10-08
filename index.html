@@ -125,6 +125,15 @@
     .countdown strong { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
     .countdown small { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; opacity: .85; }
     .countdown-label { margin: 14px 0 0; font-size: 12px; opacity: .85; letter-spacing: .4px; }
+    .cal-btn {
+      margin-top: 14px; padding: 10px 16px;
+      border: 1.5px solid rgba(255,255,255,.55); border-radius: 999px;
+      background: rgba(255,255,255,.16); color: #fff;
+      font-size: 14px; font-family: inherit; cursor: pointer;
+      transition: background .2s, transform .15s;
+    }
+    .cal-btn:hover { background: rgba(255,255,255,.28); }
+    .cal-btn:active { transform: scale(.97); }
 
     /* Selector 1 X 2 decorativo */
     .chips { display: flex; justify-content: center; gap: 10px; margin: 20px 0 6px; }
@@ -231,6 +240,7 @@
         <div><strong id="cd-s">00</strong><small>seg</small></div>
       </div>
       <p class="countdown-label" id="cdLabel">Tiempo para rellenar y echar la quiniela</p>
+      <button type="button" class="cal-btn" id="btnCal">📅 Avisarme en el calendario</button>
     </header>
 
     <div class="chips" role="group" aria-label="Pronóstico rápido">
@@ -309,6 +319,7 @@
     (function () {
       var DIA = 6, HORA = 12, MIN = 0;   // inicio de la jornada
       var AVISO_HORAS = 16;              // el contador termina 16 h antes
+      window.QUINIELA_CFG = { DIA: DIA, HORA: HORA, MIN: MIN, AVISO_HORAS: AVISO_HORAS };
       function proxima() {
         var n = new Date();
         var t = new Date(n);
@@ -332,6 +343,64 @@
       }
       tick();
       setInterval(tick, 1000);
+    })();
+
+    /* ---- Aviso en el calendario (.ics semanal con alarma) ---- */
+    (function () {
+      var C = window.QUINIELA_CFG;
+      var btn = document.getElementById('btnCal');
+      function pad(n) { return String(n).padStart(2, '0'); }
+      function local(d) {
+        return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
+      }
+      function esc(s) { return s.replace(/([,;])/g, '\\$1'); }
+
+      btn.addEventListener('click', function () {
+        var n = new Date(), t = new Date(n);
+        t.setHours(C.HORA, C.MIN, 0, 0);
+        t.setDate(n.getDate() + (C.DIA - n.getDay() + 7) % 7);
+        var ini = new Date(t.getTime() - C.AVISO_HORAS * 3600 * 1000);
+        while (ini <= n) ini.setDate(ini.getDate() + 7);
+        var fin = new Date(ini.getTime() + 30 * 60 * 1000);
+
+        var url = location.protocol.indexOf('http') === 0 ? location.origin + '/enviar.html' : '';
+        var stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        var lines = [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'PRODID:-//Tu Quiniela//ES',
+          'CALSCALE:GREGORIAN',
+          'BEGIN:VEVENT',
+          'UID:aviso-quiniela@tu-quiniela',
+          'DTSTAMP:' + stamp,
+          'DTSTART:' + local(ini),
+          'DTEND:' + local(fin),
+          'RRULE:FREQ=WEEKLY',
+          'SUMMARY:' + esc('⚽ ¡Echa tu Quiniela!'),
+          'DESCRIPTION:' + esc('Rellena y envía tu pronóstico antes de que empiece la jornada.') + (url ? '\\n' + url : ''),
+        ];
+        if (url) lines.push('URL:' + url);
+        lines.push(
+          'BEGIN:VALARM',
+          'TRIGGER:PT0S',
+          'ACTION:DISPLAY',
+          'DESCRIPTION:' + esc('⚽ ¡Echa tu Quiniela!'),
+          'END:VALARM',
+          'END:VEVENT',
+          'END:VCALENDAR'
+        );
+
+        var blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'aviso-quiniela.ics';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+
+        btn.textContent = '✅ Evento listo: ábrelo para añadirlo';
+        setTimeout(function () { btn.textContent = '📅 Avisarme en el calendario'; }, 4000);
+      });
     })();
 
     /* ---- Chips 1 X 2 ---- */
