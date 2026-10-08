@@ -225,8 +225,8 @@
       <div class="summary">
         <div class="highlight">
           <span class="trophy" aria-hidden="true">🏆</span>
-          <strong id="premioMayor">–</strong>
-          <small id="premioMayorLabel">Premio mayor</small>
+          <strong id="totalGanado">–</strong>
+          <small id="totalGanadoLabel">Ganancias totales</small>
         </div>
       </div>
     </header>
@@ -299,13 +299,17 @@
         if (!filas.length) {
           lista.innerHTML = '<div class="msg">Todavía no hay escrutinio disponible ⏳</div>';
           document.getElementById("subtitulo").textContent = "Vuelve en cuanto se publique";
-          document.getElementById("premioMayor").textContent = "–";
+          document.getElementById("totalGanado").textContent = "–";
+          document.getElementById("totalGanadoLabel").textContent = "Ganancias totales";
           return;
         }
 
         lista.innerHTML = "";
         const maxPremio = Math.max.apply(null, filas.map(function (f) { return f.premio; })) || 1;
-        const idxMayor = filas.findIndex(function (f) { return f.premio === maxPremio && f.premio > 0; });
+
+        // Suma de los premios de todos los resultados
+        const totalGanado = filas.reduce(function (suma, f) { return suma + f.premio; }, 0);
+        const premiosConDinero = filas.filter(function (f) { return f.premio > 0; }).length;
 
         // Secuencia predefinida para los aciertos de la Quiniela (15, 14, 13, 12, 11, 10)
         const aciertosOrdenados = [15, 14, 13, 12, 11, 10];
@@ -346,12 +350,15 @@
         });
 
         document.getElementById("subtitulo").textContent = filas.length + " categorías de premio";
-        if (idxMayor >= 0) {
-          contar(document.getElementById("premioMayor"), maxPremio, function (v) { return fmt(v) + " €"; });
-          document.getElementById("premioMayorLabel").textContent = "Premio mayor · " + (aciertosOrdenados[idxMayor] || "") + " aciertos";
+
+        // Cabecera: suma total de las ganancias
+        if (totalGanado > 0) {
+          contar(document.getElementById("totalGanado"), totalGanado, function (v) { return fmt(v) + " €"; });
+          document.getElementById("totalGanadoLabel").textContent =
+            "Ganancias totales · " + premiosConDinero + (premiosConDinero === 1 ? " premio" : " premios");
         } else {
-          document.getElementById("premioMayor").textContent = "–";
-          document.getElementById("premioMayorLabel").textContent = "Sin premios todavía";
+          document.getElementById("totalGanado").textContent = "0,00 €";
+          document.getElementById("totalGanadoLabel").textContent = "Sin premios todavía";
         }
       } catch (error) {
         console.error("Error cargando el escrutinio:", error);
