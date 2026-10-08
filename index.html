@@ -240,7 +240,7 @@
         <div><strong id="cd-s">00</strong><small>seg</small></div>
       </div>
       <p class="countdown-label" id="cdLabel">Tiempo para rellenar y echar la quiniela</p>
-      <button type="button" class="cal-btn" id="btnCal">📅 Avisarme en el calendario</button>
+      <button type="button" class="cal-btn" id="btnCal">📅 Avisarme (solo esta jornada)</button>
     </header>
 
     <div class="chips" role="group" aria-label="Pronóstico rápido">
@@ -349,6 +349,7 @@
     (function () {
       var C = window.QUINIELA_CFG;
       var btn = document.getElementById('btnCal');
+      var LABEL = btn.textContent;
       function pad(n) { return String(n).padStart(2, '0'); }
       function local(d) {
         return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
@@ -371,11 +372,10 @@
           'PRODID:-//Tu Quiniela//ES',
           'CALSCALE:GREGORIAN',
           'BEGIN:VEVENT',
-          'UID:aviso-quiniela@tu-quiniela',
+          'UID:aviso-quiniela-' + local(ini) + '@tu-quiniela',
           'DTSTAMP:' + stamp,
           'DTSTART:' + local(ini),
           'DTEND:' + local(fin),
-          'RRULE:FREQ=WEEKLY',
           'SUMMARY:' + esc('⚽ ¡Echa tu Quiniela!'),
           'DESCRIPTION:' + esc('Rellena y envía tu pronóstico antes de que empiece la jornada.') + (url ? '\\n' + url : ''),
         ];
@@ -390,6 +390,20 @@
           'END:VCALENDAR'
         );
 
+        // Android: se abre Google Calendar con el evento ya preparado
+        if (/android/i.test(navigator.userAgent)) {
+          var utc = function (d) { return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'; };
+          var gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE' +
+            '&text=' + encodeURIComponent('⚽ ¡Echa tu Quiniela!') +
+            '&dates=' + utc(ini) + '/' + utc(fin) +
+            '&details=' + encodeURIComponent('Rellena y envía tu pronóstico antes de que empiece la jornada.' + (url ? '\n' + url : ''));
+          window.open(gcal, '_blank');
+          btn.textContent = '✅ Abriendo Google Calendar…';
+          setTimeout(function () { btn.textContent = LABEL; }, 4000);
+          return;
+        }
+
+        // iPhone y resto: archivo .ics de un solo evento con alarma
         var blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -399,7 +413,7 @@
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
 
         btn.textContent = '✅ Evento listo: ábrelo para añadirlo';
-        setTimeout(function () { btn.textContent = '📅 Avisarme en el calendario'; }, 4000);
+        setTimeout(function () { btn.textContent = LABEL; }, 4000);
       });
     })();
 
