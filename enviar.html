@@ -205,6 +205,7 @@
     .pick.px input:checked + span { background: var(--warn); border-color: var(--warn); color: #000; }
     .pick.p2 input:checked + span { background: var(--bad); border-color: var(--bad); }
     .pick input:focus-visible + span { outline: 3px solid rgba(0,119,204,.45); outline-offset: 2px; }
+    .pick input:disabled { cursor: not-allowed; }
 
     /* ---------- Pleno al 15 ---------- */
     #extra-match {
@@ -232,12 +233,14 @@
     .btn-send:disabled { opacity: .7; cursor: wait; transform: none; }
     .btn-send.ready { animation: glow 1.8s ease-in-out infinite; }
     @keyframes glow { 0%,100% { box-shadow: 0 8px 20px rgba(0,86,179,.28); } 50% { box-shadow: 0 0 0 8px rgba(0,119,204,.18), 0 12px 26px rgba(0,86,179,.4); } }
+    .btn-send.cerrado { background: #6c757d; box-shadow: none; animation: none; cursor: not-allowed; opacity: .85; }
 
     /* ---------- Estados ---------- */
     .skeleton { height: 210px; border-radius: 16px; background: linear-gradient(90deg, var(--card) 25%, var(--line) 50%, var(--card) 75%); background-size: 200% 100%; animation: sk 1.3s linear infinite; box-shadow: var(--shadow); }
     @keyframes sk { to { background-position: -200% 0; } }
     .msg { text-align: center; padding: 26px 16px; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); color: var(--muted); }
     .msg button { margin-top: 12px; padding: 10px 18px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-size: 15px; cursor: pointer; }
+    .aviso-cierre { margin: 16px 0 0; border: 2px solid var(--bad); color: var(--text); }
 
     .shake { animation: shake .45s; border-color: var(--bad) !important; }
     @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
@@ -296,6 +299,10 @@
 
     <button type="button" id="btnVolver" class="btn-back"><span>⬅</span> Volver</button>
 
+    <div class="msg aviso-cierre" id="avisoCierre" style="display:none">
+      🔒 <b>La quiniela está cerrada.</b><br>Se abrirá cuando se carguen los partidos de la próxima jornada.
+    </div>
+
     <div class="progress" id="progress" aria-live="polite">
       <div class="top"><span id="progTxt">Elige tu nombre</span><span id="progPct">0%</span></div>
       <div class="track"><div class="fill" id="progFill"></div></div>
@@ -329,9 +336,24 @@
     let USUARIO_ESPECIAL = "";
     let DATOS = null;
 
+    // Estado de la jornada (lo decide el servidor)
+    let CIERRE = null, DESFASE = 0, CERRADA = false;
+
     const $ = id => document.getElementById(id);
     const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    // Bloquea / desbloquea el formulario
+    function bloquear(lock) {
+      CERRADA = lock;
+      document.querySelectorAll("#quinielaForm select, #quinielaForm input").forEach(el => { el.disabled = lock; });
+      const btn = $("btnEnviar");
+      btn.disabled = lock;
+      btn.classList.toggle("cerrado", lock);
+      btn.innerText = lock ? "🔒 Quiniela cerrada" : "🚀 Enviar Pronóstico";
+      $("avisoCierre").style.display = lock ? "block" : "none";
+      if (lock) $("cdTxt").textContent = "Quiniela cerrada";
+    }
 
     /* ---------- Fondo flotante ---------- */
     (function () {
@@ -347,7 +369,9 @@
       }
     })();
 
-    /* ---------- Cuenta atrás (termina 16 h antes de la jornada) ---------- */
+    /* ---------- Cuenta atrás ----------
+       Con cierre guardado en el servidor cuenta hasta él y, al llegar a 0, bloquea el formulario.
+       Sin cierre (antes de la primera importación) usa el cálculo semanal antiguo. */
     (function () {
       var DIA = 6, HORA = 12, MIN = 0;   // inicio de la jornada (0=domingo ... 6=sábado)
       var AVISO_HORAS = 16;
@@ -361,12 +385,21 @@
       }
       var objetivo = proxima();
       function pad(n) { return String(n).padStart(2, '0'); }
-      function tick() {
-        var ms = objetivo - new Date();
-        if (ms <= 0) { objetivo = proxima(); ms = objetivo - new Date(); }
+      function texto(ms) {
         var s = Math.floor(ms / 1000);
-        $("cdTxt").textContent = "Quedan " + Math.floor(s / 86400) + "d " + pad(Math.floor(s % 86400 / 3600)) + "h " +
+        return "Quedan " + Math.floor(s / 86400) + "d " + pad(Math.floor(s % 86400 / 3600)) + "h " +
           pad(Math.floor(s % 3600 / 60)) + "m " + pad(s % 60) + "s para echar la quiniela";
+      }
+      function tick() {
+        if (CIERRE) {
+          var ms = CIERRE - (Date.now() + DESFASE);
+          if (ms <= 0) { if (!CERRADA) bloquear(true); return; }
+          $("cdTxt").textContent = texto(ms);
+          return;
+        }
+        var ms2 = objetivo - new Date();
+        if (ms2 <= 0) { objetivo = proxima(); ms2 = objetivo - new Date(); }
+        $("cdTxt").textContent = texto(ms2);
       }
       tick(); setInterval(tick, 1000);
     })();
@@ -418,7 +451,7 @@
       $("progFill").style.width = pct + "%";
       $("progPct").textContent = pct + "%";
       $("progress").classList.toggle("complete", completo);
-      $("btnEnviar").classList.toggle("ready", completo && hayNombre);
+      $("btnEnviar").classList.toggle("ready", completo && hayNombre && !CERRADA);
       $("progTxt").textContent = completo
         ? (hayNombre ? "¡Todo listo! Solo falta enviar 🚀" : "Casi: falta elegir tu nombre 👤")
         : (hechos + " de " + total + " apuestas");
@@ -434,7 +467,7 @@
     async function inicializar() {
       $("partidos").innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
       try {
-        const res = await fetch(API_URL);
+        const res = await fetch(API_URL, { cache: "no-store" });
         const data = await res.json();
         DATOS = data;
         USUARIO_ESPECIAL = data.usuarioEspecial;
@@ -492,6 +525,10 @@
         scores.forEach(l => scores.forEach(v => {
           let o = document.createElement("option"); o.value = l + "-" + v; o.textContent = l + " - " + v; p15.appendChild(o);
         }));
+
+        // Estado de la jornada: abierta o cerrada según el servidor
+        if (data.cierre) { CIERRE = data.cierre; DESFASE = (data.ahora || Date.now()) - Date.now(); }
+        bloquear(data.abierta === false);
 
         actualizarProgreso();
       } catch (e) {
@@ -579,6 +616,7 @@
     /* ---------- Envío ---------- */
     $("quinielaForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (CERRADA) { toast("🔒 La quiniela está cerrada."); return; }
       const btn = $("btnEnviar");
       btn.disabled = true;
       btn.innerText = "Guardando...";
@@ -591,13 +629,18 @@
         const r = await res.json();
         if (r.resultado === "ok") {
           mostrarExito();
+        } else if (r.resultado === "cerrado") {
+          toast("🔒 La quiniela ya está cerrada.");
+          bloquear(true);
         } else {
           throw new Error("Respuesta inesperada");
         }
       } catch (err) {
         toast("❌ Error al enviar. Inténtalo de nuevo.");
-        btn.disabled = false;
-        btn.innerText = "🚀 Enviar Pronóstico";
+        if (!CERRADA) {
+          btn.disabled = false;
+          btn.innerText = "🚀 Enviar Pronóstico";
+        }
       }
     });
 

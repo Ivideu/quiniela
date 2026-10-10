@@ -196,6 +196,17 @@
     .tile .arrow { font-size: 22px; color: var(--primary); transition: transform .2s; }
     .tile:hover .arrow { transform: translateX(5px); }
 
+    /* Tarjeta bloqueada (quiniela cerrada) */
+    .tile.cerrado {
+      filter: grayscale(1);
+      opacity: .6 !important;
+      cursor: not-allowed;
+      border-left-color: #999 !important;
+    }
+    .tile.cerrado:hover, .tile.cerrado:active { transform: none; }
+    .tile.cerrado:hover .icon { transform: none; }
+    .tile.cerrado:hover .arrow { transform: none; }
+
     /* Efecto onda al pulsar */
     .ripple {
       position: absolute;
@@ -251,7 +262,7 @@
     <p class="chip-msg" id="chipMsg">Toca uno, ¿cuál te dice la intuición?</p>
 
     <nav class="menu">
-      <a class="tile" href="enviar.html">
+      <a class="tile" id="tileEnviar" href="enviar.html">
         <div class="icon">📝</div>
         <div class="txt"><b>Quiero hacer la Quiniela</b><span class="sub">Rellena tus pronósticos</span></div>
         <div class="arrow">›</div>
@@ -313,36 +324,89 @@
       }, 4000);
     })();
 
-    /* ---- Cuenta atrás ----
-       Ajusta aquí el día/hora de cierre de la jornada
-       (0=domingo ... 6=sábado) */
+    /* ---- Cuenta atrás + estado de la jornada (lo decide el servidor) ----
+       El cierre real se calcula en netlify/functions/api.mjs (viernes 20:00 Madrid).
+       Las constantes de abajo solo se usan mientras el servidor no tenga un cierre
+       guardado (hasta la primera importación de partidos). */
     (function () {
-      var DIA = 6, HORA = 12, MIN = 0;   // inicio de la jornada
+      var DIA = 6, HORA = 12, MIN = 0;   // inicio de la jornada (0=domingo ... 6=sábado)
       var AVISO_HORAS = 16;              // el contador termina 16 h antes
       window.QUINIELA_CFG = { DIA: DIA, HORA: HORA, MIN: MIN, AVISO_HORAS: AVISO_HORAS };
+
+      var objetivo = null, desfase = 0, cerrada = false, servidor = false;
+
       function proxima() {
-        var n = new Date();
-        var t = new Date(n);
+        var n = new Date(), t = new Date(n);
         t.setHours(HORA, MIN, 0, 0);
-        var diff = (DIA - n.getDay() + 7) % 7;
-        t.setDate(n.getDate() + diff);
+        t.setDate(n.getDate() + (DIA - n.getDay() + 7) % 7);
         var aviso = new Date(t.getTime() - AVISO_HORAS * 3600 * 1000);
         while (aviso <= n) aviso = new Date(aviso.getTime() + 7 * 86400 * 1000);
-        return aviso;
+        return aviso.getTime();
       }
-      var objetivo = proxima();
+      objetivo = proxima();
+
+      var tile = document.getElementById('tileEnviar');
+      var sub = tile.querySelector('.sub'), subOrig = sub.textContent;
+      var label = document.getElementById('cdLabel'), labelOrig = label.textContent;
+      var btnCal = document.getElementById('btnCal');
+
+      function aplicarEstado() {
+        if (cerrada) {
+          tile.classList.add('cerrado');
+          tile.removeAttribute('href');
+          tile.setAttribute('aria-disabled', 'true');
+          sub.textContent = '🔒 Cerrada hasta la próxima jornada';
+          label.textContent = 'Quiniela cerrada. Se abrirá con la próxima jornada';
+          btnCal.style.display = 'none';
+        } else {
+          tile.classList.remove('cerrado');
+          tile.setAttribute('href', 'enviar.html');
+          tile.removeAttribute('aria-disabled');
+          sub.textContent = subOrig;
+          label.textContent = labelOrig;
+          btnCal.style.display = '';
+        }
+      }
+
       function pad(n) { return String(n).padStart(2, '0'); }
       function tick() {
-        var ms = objetivo - new Date();
-        if (ms <= 0) { objetivo = proxima(); ms = objetivo - new Date(); }
+        var ms = objetivo - (Date.now() + desfase);
+        if (ms <= 0) {
+          if (servidor) {
+            if (!cerrada) { cerrada = true; aplicarEstado(); }
+            ms = 0;
+          } else {
+            objetivo = proxima();
+            ms = objetivo - Date.now();
+          }
+        }
         var s = Math.floor(ms / 1000);
         document.getElementById('cd-d').textContent = pad(Math.floor(s / 86400));
         document.getElementById('cd-h').textContent = pad(Math.floor(s % 86400 / 3600));
         document.getElementById('cd-m').textContent = pad(Math.floor(s % 3600 / 60));
         document.getElementById('cd-s').textContent = pad(s % 60);
       }
+
+      function cargarEstado() {
+        fetch('/api?t=' + Date.now(), { cache: 'no-store' })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.cierre) {
+              servidor = true;
+              objetivo = d.cierre;
+              desfase = (d.ahora || Date.now()) - Date.now();   // corrige relojes mal puestos
+              var nueva = d.abierta === false;
+              if (nueva !== cerrada) { cerrada = nueva; aplicarEstado(); }
+            }
+            tick();
+          })
+          .catch(function () {});
+      }
+
       tick();
       setInterval(tick, 1000);
+      cargarEstado();
+      setInterval(cargarEstado, 60000);   // si el admin importa una jornada nueva, se reabre sola
     })();
 
     /* ---- Aviso en el calendario (.ics semanal con alarma) ---- */
@@ -439,6 +503,7 @@
     /* ---- Efecto onda en las tarjetas ---- */
     document.querySelectorAll('.tile').forEach(function (tile) {
       tile.addEventListener('pointerdown', function (e) {
+        if (tile.classList.contains('cerrado')) return;
         var r = tile.getBoundingClientRect();
         var d = document.createElement('span');
         d.className = 'ripple';

@@ -59,6 +59,39 @@ function usuarioEspecial(d) {
   return (c.usuarioEspecial && c.semana === claveSemana()) ? c.usuarioEspecial : especialSemanal(d);
 }
 
+/* ---------- Cierre de la jornada (viernes 20:00 Madrid = 16 h antes del sábado 12:00) ---------- */
+const CIERRE_DIA = 5, CIERRE_HORA = 20, CIERRE_MIN = 0;   // 0=domingo ... 5=viernes
+
+function partesMadrid(ms) {
+  const p = {};
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Madrid", hourCycle: "h23",
+    year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric"
+  }).formatToParts(new Date(ms)).forEach(x => { p[x.type] = x.value; });
+  return p;
+}
+function offsetMadrid(ms) {
+  const p = partesMadrid(ms);
+  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - Math.floor(ms / 1000) * 1000;
+}
+function madridAUtc(y, m, d, h, mi) {   // hora de pared de Madrid -> instante UTC (respeta horario de verano)
+  const guess = Date.UTC(y, m - 1, d, h, mi);
+  let t = guess - offsetMadrid(guess);
+  t = guess - offsetMadrid(t);
+  return t;
+}
+function proximoCierre(desde) {
+  const p = partesMadrid(desde);
+  for (let k = 0; k < 8; k++) {
+    const f = new Date(Date.UTC(+p.year, +p.month - 1, +p.day + k));
+    if (f.getUTCDay() !== CIERRE_DIA) continue;
+    const t = madridAUtc(f.getUTCFullYear(), f.getUTCMonth() + 1, f.getUTCDate(), CIERRE_HORA, CIERRE_MIN);
+    if (t > desde) return t;
+  }
+  return null;
+}
+const cerrada = d => { const c = Number((d.config || {}).cierre); return !!c && Date.now() >= c; };
+
 /* ---------- Cálculos (antes eran fórmulas del Sheet) ---------- */
 function aciertos(d, fila) {
   let n = 0;
@@ -89,7 +122,10 @@ function respuestaGET(d) {
     escrutinio: escrutinio(d),
     global: d.global, Global: d.global,
     usuarioEspecial: usuarioEspecial(d),
-    datosPartido15: { local: p15[1] || "", visitante: p15[2] || "" }
+    datosPartido15: { local: p15[1] || "", visitante: p15[2] || "" },
+    abierta: !cerrada(d),
+    cierre: Number((d.config || {}).cierre) || null,
+    ahora: Date.now()
   };
 }
 
@@ -146,7 +182,7 @@ async function admin(data) {
       const otros = n.filter(x => x !== usuarioEspecial(d));
       if (otros.length) n = otros;
       const elegido = n[Math.floor(Math.random() * n.length)];
-      d.config = { usuarioEspecial: elegido, semana: claveSemana() };
+      d.config = { ...(d.config || {}), usuarioEspecial: elegido, semana: claveSemana() };
       await guardar(d);
       return json({ resultado: "ok", usuarioEspecial: elegido });
     }
@@ -165,13 +201,17 @@ async function admin(data) {
     }
     case "importar": {
       try {
-        if (data.partidos) d.partidos = normPartidos(data.partidos);
+        if (data.partidos) {
+          d.partidos = normPartidos(data.partidos);
+          // Jornada nueva: se fija el próximo cierre (viernes 20:00 Madrid) y la quiniela se reabre
+          d.config = { ...(d.config || {}), cierre: proximoCierre(Date.now()) };
+        }
         if (data.vaciar && !data.pronosticos) d.pronosticos = [HEAD_PRON, ...d.pronosticos.slice(1).map(f => [f[0], ...Array(15).fill("")])];
         if (data.pronosticos) d.pronosticos = normPronosticos(data.pronosticos);
         if (data.global) d.global = normGlobal(data.global);
       } catch (e) { return json({ resultado: "error", error: e.message }); }
       await guardar(d);
-      return json({ resultado: "ok", partidos: d.partidos.length - 1, jugadores: d.pronosticos.length - 1 });
+      return json({ resultado: "ok", partidos: d.partidos.length - 1, jugadores: d.pronosticos.length - 1, cierre: (d.config || {}).cierre || null });
     }
     case "guardarGlobal": {
       try { d.global = normGlobal(data.global); } catch (e) { return json({ resultado: "error", error: e.message }); }
@@ -192,6 +232,9 @@ async function admin(data) {
 
 /* ---------- Pronóstico de un jugador (enviar.html) ---------- */
 async function guardarPronostico(data) {
+  const d = await leer();
+  if (cerrada(d)) return json({ resultado: "cerrado", detalle: "La quiniela está cerrada" });
+
   const nombre = str(data.nombre);
   if (!nombre) return json({ resultado: "error", detalle: "Falta el nombre" });
   const fila = [nombre];
@@ -204,7 +247,6 @@ async function guardarPronostico(data) {
   if (!(p15 === "" || esPleno(p15))) return json({ resultado: "error", detalle: "Pleno al 15 no válido" });
   fila.push(p15);
 
-  const d = await leer();
   const idx = d.pronosticos.findIndex((f, i) => i > 0 && str(f[0]).toLowerCase() === nombre.toLowerCase());
   if (idx > 0) { fila[0] = d.pronosticos[idx][0]; d.pronosticos[idx] = fila; } else d.pronosticos.push(fila);
   await guardar(d);
