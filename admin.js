@@ -399,8 +399,7 @@
   };
 
   /* ---------- Resultados de referencia: widget de combinacionganadora.com ---------- */
-  // El script de terceros se ejecuta dentro de un iframe aislado (sandbox sin allow-same-origin),
-  // así no puede leer esta página, la contraseña ni los datos del panel. Solo se carga al abrir el panel.
+  // El widget vive en widget.html (página propia) y se muestra en un iframe; solo se carga al abrir el panel.
   function fechaJornada() {
     // Próximo domingo (o hoy si es domingo): día del sorteo de la jornada actual
     var d = new Date();
@@ -413,18 +412,9 @@
     $("qa-ref-abrir").href = "https://www.combinacionganadora.com/quiniela/resultados/" + fechaJornada() + "/";
     if (!det.open || widgetCargado) return;
     widgetCargado = true;
-    var tz = new Date().getTimezoneOffset() / 60;
-    var doc = '<!doctype html><html><head><meta charset="utf-8"><base target="_blank">' +
-      '<style>body{margin:0;font-family:Segoe UI,sans-serif}</style></head><body>' +
-      '<div id="xw_id_' + WIDGET_ID + '"></div>' +
-      '<script>(function(){var s=document.createElement("script");s.async=true;' +
-      's.src="https://www.combinacionganadora.com/widgets/load/?w=' + WIDGET_ID + '&tz=' + tz + '";' +
-      'document.body.appendChild(s);})();<\/script></body></html>';
     var fr = document.createElement("iframe");
-    fr.setAttribute("sandbox", "allow-scripts allow-popups allow-popups-to-escape-sandbox");
-    fr.setAttribute("referrerpolicy", "no-referrer");
     fr.setAttribute("title", "Resultados La Quiniela");
-    fr.srcdoc = doc;
+    fr.src = "widget.html";
     $("qa-wbox").innerHTML = "";
     $("qa-wbox").appendChild(fr);
     setMsg("qa-ref-msg", "Si el cuadro sale vacío, usa «Jornada en pestaña nueva».", "");
