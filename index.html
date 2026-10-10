@@ -11,6 +11,7 @@
       --card: #ffffff;
       --text: #333333;
       --muted: #6b7785;
+      --line: rgba(120, 140, 160, .25);
       --primary: #0077cc;
       --primary-dark: #005fa3;
       --accent: #ffb703;
@@ -135,25 +136,34 @@
     .cal-btn:hover { background: rgba(255,255,255,.28); }
     .cal-btn:active { transform: scale(.97); }
 
-    /* Selector 1 X 2 decorativo */
-    .chips { display: flex; justify-content: center; gap: 10px; margin: 20px 0 6px; }
-    .chip {
-      width: 46px; height: 46px;
-      border-radius: 50%;
-      border: 2px solid var(--primary);
-      background: var(--card);
-      color: var(--primary);
-      font-weight: 800;
-      font-size: 18px;
-      cursor: pointer;
-      transition: transform .15s, background .2s, color .2s;
-      box-shadow: var(--shadow);
+    /* Quién va ganando: clasificación */
+    .lider {
+      display: block; margin: 20px 0 16px; padding: 16px 18px;
+      background: var(--card); color: var(--text); text-decoration: none;
+      border-radius: 14px; box-shadow: var(--shadow);
+      border-top: 4px solid var(--accent);
       animation: rise .6s ease both;
+      transition: transform .18s ease;
     }
-    .chip:nth-child(2) { animation-delay: .08s; }
-    .chip:nth-child(3) { animation-delay: .16s; }
-    .chip.on { background: var(--primary); color: #fff; transform: scale(1.12); }
-    .chip-msg { text-align: center; min-height: 20px; margin: 4px 0 14px; font-size: 14px; color: var(--muted); }
+    .lider:hover { transform: translateY(-3px); }
+    .lider:active { transform: scale(.98); }
+    .lider-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .lider-tit { font-size: 13px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--primary); }
+    .lider-pend {
+      font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+      background: #fff3cd; color: #7a5b00; border: 1px solid #ffe08a;
+    }
+    .lider-pend.fin { background: #d4edda; color: #155724; border-color: #b7dfc2; }
+    .lider-aviso { margin: 12px 0 2px; text-align: center; font-size: 14px; color: var(--muted); }
+    .lider-lista { list-style: none; margin: 10px 0 0; padding: 0; }
+    .lider-fila { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-top: 1px solid var(--line); }
+    .lider-fila:first-child { border-top: 0; }
+    .lider-pos { flex: none; width: 30px; text-align: center; font-size: 18px; font-weight: 800; color: var(--muted); }
+    .lider-nombre { flex: 1; min-width: 0; font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lider-ac { flex: none; font-size: 13px; color: var(--muted); }
+    .lider-ac b { font-size: 20px; color: var(--ok); margin-right: 3px; }
+    .lider-fila.top .lider-nombre { color: var(--primary); font-size: 18px; }
+    .lider-mas { margin: 8px 0 0; text-align: center; font-size: 13px; color: var(--primary); font-weight: 700; }
 
     /* Tarjetas de navegación */
     .menu { display: grid; gap: 12px; }
@@ -254,12 +264,15 @@
       <button type="button" class="cal-btn" id="btnCal">📅 Avisarme (solo esta jornada)</button>
     </header>
 
-    <div class="chips" role="group" aria-label="Pronóstico rápido">
-      <button class="chip" type="button" data-v="1">1</button>
-      <button class="chip" type="button" data-v="X">X</button>
-      <button class="chip" type="button" data-v="2">2</button>
-    </div>
-    <p class="chip-msg" id="chipMsg">Toca uno, ¿cuál te dice la intuición?</p>
+    <a class="lider" id="lider" href="pronosticos.html" aria-live="polite">
+      <div class="lider-cab">
+        <span class="lider-tit" id="liderTit">🏅 Quién va ganando</span>
+        <span class="lider-pend" id="liderPend" style="display:none"></span>
+      </div>
+      <p class="lider-aviso" id="liderAviso">Cargando…</p>
+      <ol class="lider-lista" id="liderLista"></ol>
+      <p class="lider-mas" id="liderMas" style="display:none"></p>
+    </a>
 
     <nav class="menu">
       <a class="tile" id="tileEnviar" href="enviar.html">
@@ -409,6 +422,99 @@
       setInterval(cargarEstado, 60000);   // si el admin importa una jornada nueva, se reabre sola
     })();
 
+    /* ---- Quién va ganando: mini clasificación (misma lógica que pronosticos.html) ---- */
+    (function () {
+      var MAX_FILAS = 5;   // cuántos jugadores se ven en la portada; el resto, en pronosticos.html
+      var norm = function (v) { return v == null ? '' : String(v).trim().toUpperCase(); };
+      var esRes = function (v) { return v === '1' || v === 'X' || v === '2'; };
+      var tit = document.getElementById('liderTit');
+      var pendEl = document.getElementById('liderPend');
+      var aviso = document.getElementById('liderAviso');
+      var lista = document.getElementById('liderLista');
+      var mas = document.getElementById('liderMas');
+      var MEDALLAS = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+      function pintar(d) {
+        var partidos = d.partidos || [];
+        var filas = (d.pronosticos || []).slice(1).filter(function (f) { return f && String(f[0] == null ? '' : f[0]).trim() !== ''; });
+
+        // Resultados que ya han salido y cuántos faltan (sobre los 14)
+        var salio = [], total = 0, pend = 0, i;
+        for (i = 1; i <= 14; i++) {
+          var p = partidos[i], r = p ? norm(p[3]) : '';
+          salio[i] = esRes(r) ? r : '';
+          if (p) { total++; if (!salio[i]) pend++; }
+        }
+
+        lista.innerHTML = '';
+        mas.style.display = 'none';
+        tit.textContent = '🏅 Quién va ganando';
+
+        if (!filas.length || !total) {
+          pendEl.style.display = 'none';
+          aviso.style.display = 'block';
+          aviso.textContent = 'Aún no hay jornada en juego';
+          return;
+        }
+
+        // Cuántos resultados quedan por salir
+        pendEl.style.display = '';
+        pendEl.classList.toggle('fin', pend === 0);
+        pendEl.textContent = pend === 0
+          ? 'Jornada terminada'
+          : 'Quedan ' + pend + ' de ' + total + (pend === 1 ? ' resultado' : ' resultados');
+
+        if (pend === total) {
+          aviso.style.display = 'block';
+          aviso.textContent = 'Aún no ha salido ningún resultado';
+          return;
+        }
+        aviso.style.display = 'none';
+
+        // Aciertos de cada jugador, de más a menos (empates: orden del Sheet)
+        var jug = filas.map(function (f) {
+          var ok = 0;
+          for (var k = 1; k <= 14; k++) if (salio[k] && norm(f[k]) === salio[k]) ok++;
+          return { nombre: String(f[0]).trim(), ok: ok };
+        });
+        jug.sort(function (a, b) { return b.ok - a.ok; });
+
+        // Puesto (los empatados comparten puesto)
+        var pos = [];
+        jug.forEach(function (j, idx) { pos[idx] = (idx > 0 && jug[idx - 1].ok === j.ok) ? pos[idx - 1] : idx + 1; });
+
+        var lideres = jug.filter(function (j) { return j.ok === jug[0].ok; }).length;
+        if (pend === 0) tit.textContent = lideres > 1 ? '🤝 Empate en cabeza' : '🏆 Ganador';
+        else if (lideres > 1) tit.textContent = '🤝 Empatados en cabeza';
+
+        jug.slice(0, MAX_FILAS).forEach(function (j, idx) {
+          var li = document.createElement('li');
+          li.className = 'lider-fila' + (pos[idx] === 1 ? ' top' : '');
+          var ps = document.createElement('span'); ps.className = 'lider-pos'; ps.textContent = MEDALLAS[pos[idx]] || pos[idx] + 'º';
+          var nm = document.createElement('span'); nm.className = 'lider-nombre'; nm.textContent = j.nombre;
+          var ac = document.createElement('span'); ac.className = 'lider-ac';
+          var b = document.createElement('b'); b.textContent = j.ok;
+          ac.appendChild(b); ac.appendChild(document.createTextNode(j.ok === 1 ? 'acierto' : 'aciertos'));
+          li.appendChild(ps); li.appendChild(nm); li.appendChild(ac);
+          lista.appendChild(li);
+        });
+
+        if (jug.length > MAX_FILAS) {
+          mas.style.display = 'block';
+          mas.textContent = 'Ver los ' + jug.length + ' jugadores ›';
+        }
+      }
+
+      function cargar() {
+        fetch('/api?t=' + Date.now(), { cache: 'no-store' })
+          .then(function (r) { return r.json(); })
+          .then(pintar)
+          .catch(function () { aviso.style.display = 'block'; aviso.textContent = 'No se pudo cargar la clasificación'; });
+      }
+      cargar();
+      setInterval(cargar, 60000);   // se actualiza solo cuando metes resultados en el admin
+    })();
+
     /* ---- Aviso en el calendario (.ics semanal con alarma) ---- */
     (function () {
       var C = window.QUINIELA_CFG;
@@ -478,25 +584,6 @@
 
         btn.textContent = '✅ Evento listo: ábrelo para añadirlo';
         setTimeout(function () { btn.textContent = LABEL; }, 4000);
-      });
-    })();
-
-    /* ---- Chips 1 X 2 ---- */
-    (function () {
-      var chips = document.querySelectorAll('.chip');
-      var msg = document.getElementById('chipMsg');
-      var textos = {
-        '1': '¡Gana el local! Confianza en casa 🏠',
-        'X': 'Empate… el valiente de la quiniela 🤝',
-        '2': 'Sorpresa fuera de casa 🚌'
-      };
-      chips.forEach(function (c) {
-        c.addEventListener('click', function () {
-          chips.forEach(function (x) { x.classList.remove('on'); });
-          c.classList.add('on');
-          msg.textContent = textos[c.dataset.v];
-          if (navigator.vibrate) navigator.vibrate(15);
-        });
       });
     })();
 
