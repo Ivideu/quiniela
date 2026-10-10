@@ -14,9 +14,8 @@
   var API_URL = "/api";
   var ADMIN_PASS = "";   // solo en memoria; nunca se guarda
   var DATA = null;       // última copia de datos leída del Sheet
-  var REF_DEFAULT = "https://www.flashscore.es/";   // web que se carga por defecto en la capa de referencia
-  var refIniciada = false;                          // true en cuanto se carga (o se quita) algo en la capa
-  var imgObjectUrl = null;
+  var WIDGET_ID = "5299f18ec310a025d89539a159cc45c327e605ba9604";   // widget de combinacionganadora.com
+  var widgetCargado = false;
 
   /* ---------- Estilos (acotados a #qa-overlay para no chocar con la página) ---------- */
   var css = [
@@ -73,18 +72,8 @@
     ".qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}",
     ".qa-links a{flex:1 1 auto;text-align:center;padding:8px 10px;border-radius:8px;background:#e3f2fd;color:#0056b3;text-decoration:none;font-size:13px;font-weight:bold;border:1px solid #b3d7ff}",
     ".qa-links a:hover{background:#cfe7fb}",
-    ".qa-urlrow{display:flex;gap:8px;margin-top:10px}",
-    "#qa-box .qa-urlrow button{width:auto;margin:0;padding:10px 14px;white-space:nowrap}",
-    "#qa-drop{margin-top:10px;padding:14px;border:2px dashed #7fb4ea;border-radius:10px;text-align:center;color:#003366;font-size:14px;background:#fff;outline:none}",
-    "#qa-drop:focus,#qa-drop.qa-over{border-color:#0056b3;background:#eef6ff}",
-    "#qa-drop label{color:#0056b3;text-decoration:underline;cursor:pointer;display:inline;margin:0;font-weight:bold}",
-    "#qa-visor{margin-top:10px}",
-    "#qa-visor iframe{width:100%;height:62vh;min-height:360px;border:1px solid #b3d7ff;border-radius:8px;background:#fff}",
-    "#qa-visor img{width:100%;height:auto;max-height:70vh;object-fit:contain;display:block;border:1px solid #b3d7ff;border-radius:8px;background:#fff;cursor:zoom-in}",
-    "#qa-visor img.qa-zoom{max-height:none;cursor:zoom-out}",
-    ".qa-refbtns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}",
-    "#qa-box .qa-refbtns button,#qa-box .qa-refbtns a{flex:1 1 auto;width:auto;margin:0;padding:8px 10px;font-size:13px;text-align:center;border-radius:8px;text-decoration:none;display:inline-block}",
-    "#qa-box .qa-refbtns a{background:#0056b3;color:#fff;font-weight:bold}",
+    "#qa-wbox{margin-top:10px}",
+    "#qa-wbox iframe{width:100%;height:62vh;min-height:380px;border:1px solid #b3d7ff;border-radius:8px;background:#fff}",
     /* Importar Excel */
     ".qa-hint{font-size:13px;color:#555;margin:0 0 8px}",
     "#qa-box textarea{width:100%;padding:10px;margin-top:8px;border:2px dashed #7fb4ea;border-radius:8px;font:12px monospace;background:#f8fbff;resize:vertical}",
@@ -125,21 +114,10 @@
               '<details id="qa-ref" open>' +
                 '<summary>📺 Resultados de referencia</summary>' +
                 '<div class="qa-links">' +
-                  '<a href="https://www.flashscore.es/" target="_blank" rel="noopener noreferrer">Flashscore</a>' +
-                  '<a href="https://es.besoccer.com/" target="_blank" rel="noopener noreferrer">BeSoccer</a>' +
-                  '<a href="https://www.resultados-futbol.com/" target="_blank" rel="noopener noreferrer">Resultados Fútbol</a>' +
-                  '<a href="https://www.laliga.com/" target="_blank" rel="noopener noreferrer">LaLiga</a>' +
+                  '<a id="qa-ref-abrir" href="https://www.combinacionganadora.com/quiniela/" target="_blank" rel="noopener noreferrer">↗ Jornada en pestaña nueva</a>' +
+                  '<a id="qa-ref-recargar" href="#">↻ Recargar</a>' +
                 '</div>' +
-                '<div class="qa-urlrow">' +
-                  '<input type="text" id="qa-ref-url" placeholder="Dirección de una web o de una imagen" autocomplete="off" />' +
-                  '<button type="button" id="qa-ref-cargar">Cargar</button>' +
-                '</div>' +
-                '<div id="qa-drop" tabindex="0">📋 Pega aquí una <b>captura</b> (Ctrl+V), arrástrala, o <label>elige un archivo<input type="file" id="qa-ref-file" accept="image/*" hidden></label></div>' +
-                '<div id="qa-visor"></div>' +
-                '<div class="qa-refbtns" id="qa-refbtns" style="display:none">' +
-                  '<a id="qa-ref-abrir" href="#" target="_blank" rel="noopener noreferrer">↗ Abrir en pestaña nueva</a>' +
-                  '<button type="button" class="qa-sec" id="qa-ref-quitar">✖ Quitar</button>' +
-                '</div>' +
+                '<div id="qa-wbox"></div>' +
                 '<div class="qa-msg" id="qa-ref-msg"></div>' +
               '</details>' +
             '</div>' +
@@ -420,105 +398,48 @@
     setMsg("qa-res-msg", "");
   };
 
-  /* ---------- Capa de referencia (web / imagen / captura pegada) ---------- */
-  function limpiarVisor() {
-    refIniciada = true;   // a partir de aquí ya no se vuelve a cargar la web por defecto sola
-    $("qa-visor").innerHTML = "";
-    $("qa-refbtns").style.display = "none";
-    if (imgObjectUrl) { try { URL.revokeObjectURL(imgObjectUrl); } catch (e) {} imgObjectUrl = null; }
+  /* ---------- Resultados de referencia: widget de combinacionganadora.com ---------- */
+  // El script de terceros se ejecuta dentro de un iframe aislado (sandbox sin allow-same-origin),
+  // así no puede leer esta página, la contraseña ni los datos del panel. Solo se carga al abrir el panel.
+  function fechaJornada() {
+    // Próximo domingo (o hoy si es domingo): día del sorteo de la jornada actual
+    var d = new Date();
+    d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
+    var p = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
   }
-
-  function normalizaUrl(txt) {
-    txt = (txt || "").trim();
-    if (!txt) return "";
-    if (!/^[a-z][a-z0-9+.-]*:/i.test(txt)) txt = "https://" + txt;
-    return /^https?:\/\//i.test(txt) ? txt : "";   // solo http(s): nada de javascript:, data:, etc.
-  }
-
-  function mostrarImagen(src, abrirHref) {
-    limpiarVisor();
-    var img = document.createElement("img");
-    img.alt = "Resultados de referencia";
-    img.onclick = function () { img.classList.toggle("qa-zoom"); };
-    img.onerror = function () { setMsg("qa-ref-msg", "No se pudo cargar la imagen", "err"); };
-    img.src = src;
-    $("qa-visor").appendChild(img);
-    $("qa-ref-abrir").href = abrirHref || src;
-    $("qa-refbtns").style.display = "flex";
-    setMsg("qa-ref-msg", "Pulsa la imagen para ampliarla", "");
-  }
-
-  function mostrarWeb(url) {
-    limpiarVisor();
+  function cargarWidget() {
+    var det = $("qa-ref");
+    $("qa-ref-abrir").href = "https://www.combinacionganadora.com/quiniela/resultados/" + fechaJornada() + "/";
+    if (!det.open || widgetCargado) return;
+    widgetCargado = true;
+    var tz = new Date().getTimezoneOffset() / 60;
+    var doc = '<!doctype html><html><head><meta charset="utf-8"><base target="_blank">' +
+      '<style>body{margin:0;font-family:Segoe UI,sans-serif}</style></head><body>' +
+      '<div id="xw_id_' + WIDGET_ID + '"></div>' +
+      '<script>(function(){var s=document.createElement("script");s.async=true;' +
+      's.src="https://www.combinacionganadora.com/widgets/load/?w=' + WIDGET_ID + '&tz=' + tz + '";' +
+      'document.body.appendChild(s);})();<\/script></body></html>';
     var fr = document.createElement("iframe");
+    fr.setAttribute("sandbox", "allow-scripts allow-popups allow-popups-to-escape-sandbox");
     fr.setAttribute("referrerpolicy", "no-referrer");
-    fr.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups allow-forms");
-    fr.src = url;
-    $("qa-visor").appendChild(fr);
-    $("qa-ref-abrir").href = url;
-    $("qa-refbtns").style.display = "flex";
-    setMsg("qa-ref-msg", "Si sale en blanco o con un error, esa web no permite mostrarse aquí: usa «Abrir en pestaña nueva» o pega una captura.", "");
-  }
-
-  function cargarReferencia() {
-    var url = normalizaUrl($("qa-ref-url").value);
-    if (!url) { setMsg("qa-ref-msg", "Escribe una dirección válida (https://...)", "err"); return; }
-    $("qa-ref-url").value = url;
-    if (/\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(url)) mostrarImagen(url, url);
-    else mostrarWeb(url);
-  }
-
-  function mostrarArchivo(file) {
-    if (!file || !/^image\//.test(file.type || "")) { setMsg("qa-ref-msg", "Eso no es una imagen", "err"); return; }
-    var src = URL.createObjectURL(file);
-    mostrarImagen(src, src);
-    imgObjectUrl = src;   // se libera al quitar/cambiar (mostrarImagen limpió el anterior antes)
-  }
-
-  // Al abrir el panel se carga Flashscore. En el móvil la capa empieza plegada y se carga al desplegarla.
-  function cargarPorDefecto() {
-    if (refIniciada || !$("qa-ref").open) return;
-    $("qa-ref-url").value = REF_DEFAULT;
-    mostrarWeb(REF_DEFAULT);
+    fr.setAttribute("title", "Resultados La Quiniela");
+    fr.srcdoc = doc;
+    $("qa-wbox").innerHTML = "";
+    $("qa-wbox").appendChild(fr);
+    setMsg("qa-ref-msg", "Si el cuadro sale vacío, usa «Jornada en pestaña nueva».", "");
   }
   function restaurarReferencia() {
     if (window.matchMedia && !window.matchMedia("(min-width:900px)").matches) $("qa-ref").open = false;
-    cargarPorDefecto();
+    cargarWidget();
   }
-  $("qa-ref").addEventListener("toggle", cargarPorDefecto);
-
-  $("qa-ref-cargar").onclick = cargarReferencia;
-  $("qa-ref-url").addEventListener("keydown", function (e) { if (e.key === "Enter") cargarReferencia(); });
-  $("qa-ref-quitar").onclick = function () { limpiarVisor(); setMsg("qa-ref-msg", ""); };
-  $("qa-ref-file").addEventListener("change", function (e) {
-    mostrarArchivo(e.target.files && e.target.files[0]);
-    e.target.value = "";
-  });
-
-  var drop = $("qa-drop");
-  ["dragenter", "dragover"].forEach(function (ev) {
-    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("qa-over"); });
-  });
-  ["dragleave", "drop"].forEach(function (ev) {
-    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("qa-over"); });
-  });
-  drop.addEventListener("drop", function (e) {
-    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) mostrarArchivo(f);
-  });
-
-  // Ctrl+V en cualquier parte del panel: si lo pegado es una imagen, se muestra.
-  // (Si es texto, se deja como está para poder pegar direcciones en el campo.)
-  document.addEventListener("paste", function (e) {
-    if (overlay.style.display !== "flex" || $("qa-panel").style.display === "none") return;
-    var items = (e.clipboardData && e.clipboardData.items) || [];
-    for (var i = 0; i < items.length; i++) {
-      if (items[i].kind === "file" && /^image\//.test(items[i].type)) {
-        var f = items[i].getAsFile();
-        if (f) { e.preventDefault(); mostrarArchivo(f); return; }
-      }
-    }
-  });
+  $("qa-ref").addEventListener("toggle", cargarWidget);
+  $("qa-ref-recargar").onclick = function (e) {
+    e.preventDefault();
+    widgetCargado = false;
+    $("qa-wbox").innerHTML = "";
+    cargarWidget();
+  };
 
   /* ---------- Rotar usuario especial ---------- */
   $("qa-rotar").onclick = async function () {
