@@ -73,7 +73,7 @@
     ".qa-links a{flex:1 1 auto;text-align:center;padding:8px 10px;border-radius:8px;background:#e3f2fd;color:#0056b3;text-decoration:none;font-size:13px;font-weight:bold;border:1px solid #b3d7ff}",
     ".qa-links a:hover{background:#cfe7fb}",
     "#qa-wbox{margin-top:10px}",
-    "#qa-wbox iframe{width:100%;height:62vh;min-height:380px;border:1px solid #b3d7ff;border-radius:8px;background:#fff}",
+    "#qa-wbox iframe{width:100%;height:960px;border:1px solid #b3d7ff;border-radius:8px;background:#fff}",
     /* Importar Excel */
     ".qa-hint{font-size:13px;color:#555;margin:0 0 8px}",
     "#qa-box textarea{width:100%;padding:10px;margin-top:8px;border:2px dashed #7fb4ea;border-radius:8px;font:12px monospace;background:#f8fbff;resize:vertical}",
