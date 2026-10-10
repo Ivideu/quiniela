@@ -423,10 +423,26 @@
       if (!fr.isConnected) { clearInterval(timer); return; }
       try {
         var d = fr.contentDocument;
-        var h = d && d.body ? Math.max(d.body.scrollHeight, d.body.offsetHeight) : 0;
+        if (!d || !d.body) return;
+        // Ajuste de ancho (móvil): si el widget es más ancho que el cuadro, se reduce para que quepa entero
+        var z = parseFloat(d.body.style.zoom) || 1;
+        var natural = d.documentElement.scrollWidth / z;
+        var w = fr.clientWidth;
+        if (natural > w + 2) { z = Math.max(0.3, w / natural); } else { z = 1; }
+        if (Math.abs((parseFloat(d.body.style.zoom) || 1) - z) > 0.01) d.body.style.zoom = z;
+        // Altura automática
+        var h = Math.max(d.body.scrollHeight, d.body.offsetHeight);
         if (h > 100 && Math.abs(h - fr.offsetHeight) > 4) fr.style.height = (h + 20) + "px";
+        // Intento único de pasar a la jornada siguiente (la que se está jugando): pulsa la flecha «›» del widget
+        if (!avanzado && /Jornada/i.test(d.body.textContent || "")) {
+          var c = d.querySelectorAll('[class*="next" i],[class*="sig" i],[class*="right" i],[class*="forward" i]');
+          for (var i = 0; i < c.length; i++) {
+            if (c[i].children.length === 0 || c[i].tagName === "A" || c[i].tagName === "BUTTON") { avanzado = true; c[i].click(); break; }
+          }
+        }
       } catch (e) { clearInterval(timer); }
     }, 500);
+    var avanzado = false;
     setMsg("qa-ref-msg", "Si el cuadro sale vacío, usa «Jornada en pestaña nueva».", "");
   }
   function restaurarReferencia() {
