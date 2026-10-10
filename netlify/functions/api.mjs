@@ -213,6 +213,14 @@ async function admin(data) {
       await guardar(d);
       return json({ resultado: "ok", partidos: d.partidos.length - 1, jugadores: d.pronosticos.length - 1, cierre: (d.config || {}).cierre || null });
     }
+    /**Botón cerrar ahora */
+      case "cerrarAhora": {
+      d.config = { ...(d.config || {}), cierre: Date.now() };
+      await guardar(d);
+      return json({ resultado: "ok", cierre: d.config.cierre });
+    }
+
+
     case "guardarGlobal": {
       try { d.global = normGlobal(data.global); } catch (e) { return json({ resultado: "error", error: e.message }); }
       await guardar(d);

@@ -140,6 +140,10 @@
               '</div>' +
               '<button type="button" id="qa-guardar">💾 Guardar resultados</button>' +
               '<div class="qa-msg" id="qa-res-msg"></div>' +
+              '<h3>🔒 Cierre de la quiniela</h3>' +
+              '<p class="qa-hint">Cierra la quiniela ahora mismo, solo para esta jornada. Se reabre al importar la siguiente.</p>' +
+              '<button type="button" class="qa-sec" id="qa-cierre-ya">🔒 Cerrar quiniela ahora</button>' +
+              '<div class="qa-msg" id="qa-cierre-msg"></div>' +
               '<h3>📥 Importar jornada desde Excel</h3>' +
               '<p class="qa-hint">Sube tu Excel (hoja «Partidos»; opcionalmente «Pronosticos» y «Global») o pega aquí las celdas A:J de Partidos copiadas de Excel.</p>' +
               '<input type="file" id="qa-imp-file" accept=".xlsx,.xls,.csv" />' +
@@ -620,6 +624,20 @@
     } catch (e) { setMsg("qa-imp-msg", e.message || "Error", "err"); }
     btn.disabled = false;
   };
+
+  /* ---------- Cerrar la quiniela ahora ---------- */
+  $("qa-cierre-ya").onclick = async function () {
+    if (!confirm("¿Cerrar la quiniela ahora? Nadie podrá enviar pronósticos hasta que importes la próxima jornada.")) return;
+    var btn = $("qa-cierre-ya");
+    btn.disabled = true;
+    setMsg("qa-cierre-msg", "Cerrando...");
+    try {
+      var r = await post({ action: "cerrarAhora" });
+      setMsg("qa-cierre-msg", r.resultado === "ok" ? "✅ Quiniela cerrada. Se reabrirá al importar la próxima jornada." : (r.error || "Error"), r.resultado === "ok" ? "ok" : "err");
+    } catch (e) { setMsg("qa-cierre-msg", "Error de conexión", "err"); }
+    btn.disabled = false;
+  };
+
 
   /* ---------- Premios ---------- */
   function pintarPremios() {
