@@ -73,13 +73,7 @@
     ".qa-links a{flex:1 1 auto;text-align:center;padding:8px 10px;border-radius:8px;background:#e3f2fd;color:#0056b3;text-decoration:none;font-size:13px;font-weight:bold;border:1px solid #b3d7ff}",
     ".qa-links a:hover{background:#cfe7fb}",
     "#qa-wbox{margin-top:10px}",
-    "#qa-ref3{margin-top:12px;border:1px solid #b3d7ff;border-radius:10px;padding:8px 10px;background:#fff}",
-    "#qa-ref3>summary{cursor:pointer;font-weight:bold;color:#003366;font-size:.98em}",
-    "#qa-wbox2 iframe{margin-top:8px}",
-    "#qa-ref2{margin-top:12px;border:1px solid #b3d7ff;border-radius:10px;padding:8px 10px;background:#fff}",
-    "#qa-ref2>summary{cursor:pointer;font-weight:bold;color:#003366;font-size:.98em}",
-    "#qa-web iframe{display:block;width:100%;height:clamp(320px,65vh,720px);margin-top:8px;border:1px solid #b3d7ff;border-radius:8px;background:#fff}",
-    "#qa-wbox iframe,#qa-wbox2 iframe{width:100%;height:420px;border:1px solid #b3d7ff;border-radius:8px;background:#fff}",
+    "#qa-wbox iframe{width:100%;height:420px;border:1px solid #b3d7ff;border-radius:8px;background:#fff}",
     /* Importar Excel */
     ".qa-hint{font-size:13px;color:#555;margin:0 0 8px}",
     "#qa-box textarea{width:100%;padding:10px;margin-top:8px;border:2px dashed #7fb4ea;border-radius:8px;font:12px monospace;background:#f8fbff;resize:vertical}",
@@ -124,14 +118,6 @@
                   '<a id="qa-ref-recargar" href="#">↻ Recargar</a>' +
                 '</div>' +
                 '<div id="qa-wbox"></div>' +
-                '<details id="qa-ref3">' +
-                  '<summary>📋 Widget transparente (La Quiniela)</summary>' +
-                  '<div id="qa-wbox2"></div>' +
-                '</details>' +
-                '<details id="qa-ref2">' +
-                  '<summary>📅 Jornada de este fin de semana (web)</summary>' +
-                  '<div id="qa-web"></div>' +
-                '</details>' +
                 '<div class="qa-msg" id="qa-ref-msg"></div>' +
               '</details>' +
             '</div>' +
@@ -451,26 +437,6 @@
       } catch (e) { clearInterval(timer); }
     }, 500);
   }
-  function cargarWidget2() {
-    var det = $("qa-ref3"), box = $("qa-wbox2");
-    if (!det.open || box.firstChild) return;
-    var fr = document.createElement("iframe");
-    fr.setAttribute("title", "Widget La Quiniela (transparente)");
-    fr.src = "widget2.html";
-    box.appendChild(fr);
-    autoAjuste(fr);
-  }
-  $("qa-ref3").addEventListener("toggle", cargarWidget2);
-  function cargarWeb() {
-    var det = $("qa-ref2"), box = $("qa-web");
-    if (!det.open || box.firstChild) return;
-    var fr = document.createElement("iframe");
-    fr.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox");
-    fr.setAttribute("title", "Resultados de la jornada");
-    fr.src = "https://www.combinacionganadora.com/quiniela/resultados/" + fechaJornada() + "/";
-    box.appendChild(fr);
-  }
-  $("qa-ref2").addEventListener("toggle", cargarWeb);
   function restaurarReferencia() {
     if (window.matchMedia && !window.matchMedia("(min-width:900px)").matches) $("qa-ref").open = false;
     cargarWidget();
