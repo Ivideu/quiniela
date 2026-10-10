@@ -1,11 +1,13 @@
 /* =====================================================================
    admin.js — Menú admin oculto de "Tu Quiniela"
    Se activa con 5 clicks seguidos sobre el título (h1). Pide contraseña
-   (validada en el servidor, Apps Script) y permite:
+   (validada en el servidor, Netlify) y permite:
+     · abrir / cerrar la quiniela a mano
      · rotar al azar el usuario especial ⭐
-     · poner los resultados de la jornada (columna D de la hoja Partidos)
+     · poner los resultados de la jornada
+     · importar la jornada desde Excel
+     · victorias totales y premios del escrutinio
      · tener a la vista una capa de REFERENCIA con los resultados reales
-       (una web, una imagen por dirección, o una captura pegada con Ctrl+V)
    Uso: <script src="admin.js"></script> al final del <body>.
    ===================================================================== */
 (function () {
@@ -13,7 +15,7 @@
 
   var API_URL = "/api";
   var ADMIN_PASS = "";   // solo en memoria; nunca se guarda
-  var DATA = null;       // última copia de datos leída del Sheet
+  var DATA = null;       // última copia de datos leída del servidor
   var WIDGET_ID = "5299f18ec310a025d89539a159cc45c327e605ba9604";   // widget de combinacionganadora.com
   var widgetCargado = false;
 
@@ -32,9 +34,14 @@
     "#qa-box button:disabled{opacity:.6;cursor:wait}",
     "#qa-box button.qa-sec{background:#6c757d}#qa-box button.qa-sec:hover{background:#545b62}",
     "#qa-box button.qa-gold{background:#d39e00}#qa-box button.qa-gold:hover{background:#a67c00}",
+    "#qa-box button.qa-verde{background:#218838}#qa-box button.qa-verde:hover{background:#19692c}",
+    "#qa-box button.qa-rojo{background:#c82333}#qa-box button.qa-rojo:hover{background:#a51b29}",
     ".qa-msg{margin-top:10px;font-size:14px;text-align:center;min-height:18px;color:#555}",
     ".qa-msg.err{color:#c82333}.qa-msg.ok{color:#218838}",
     ".qa-especial{text-align:center;font-size:1.2em;font-weight:bold;background:#fffcf0;border:2px solid #ffd700;border-radius:10px;padding:12px;color:#003366}",
+    ".qa-estado{text-align:center;font-size:1.15em;font-weight:bold;border-radius:10px;padding:12px;border:2px solid #b3d7ff;background:#f8fbff;color:#003366}",
+    ".qa-estado.abierta{background:#e8f6ec;border-color:#9bd3ac;color:#155724}",
+    ".qa-estado.cerrada{background:#fdecee;border-color:#f0aab2;color:#8a1520}",
     /* Boleto de quiniela */
     ".qa-boleto{background:#fff6f4;border:3px solid #d62839;border-radius:12px;overflow:hidden;color:#b01e2c}",
     ".qa-bol-head{background:#d62839;color:#fff;padding:10px 12px;text-align:center}",
@@ -122,6 +129,11 @@
               '</details>' +
             '</div>' +
             '<div id="qa-col-main">' +
+              '<h3>🔓 Abrir / cerrar la quiniela</h3>' +
+              '<div class="qa-estado" id="qa-estado">-</div>' +
+              '<button type="button" class="qa-verde" id="qa-abrir">🔓 Abrir quiniela</button>' +
+              '<button type="button" class="qa-rojo" id="qa-cerrar-q">🔒 Cerrar quiniela</button>' +
+              '<div class="qa-msg" id="qa-cierre-msg"></div>' +
               '<h3>⭐ Usuario especial</h3>' +
               '<div class="qa-especial" id="qa-especial">-</div>' +
               '<button type="button" class="qa-gold" id="qa-rotar">🎲 Rotar al azar</button>' +
@@ -140,10 +152,6 @@
               '</div>' +
               '<button type="button" id="qa-guardar">💾 Guardar resultados</button>' +
               '<div class="qa-msg" id="qa-res-msg"></div>' +
-              '<h3>🔒 Cierre de la quiniela</h3>' +
-              '<p class="qa-hint">Cierra la quiniela ahora mismo, solo para esta jornada. Se reabre al importar la siguiente.</p>' +
-              '<button type="button" class="qa-sec" id="qa-cierre-ya">🔒 Cerrar quiniela ahora</button>' +
-              '<div class="qa-msg" id="qa-cierre-msg"></div>' +
               '<h3>📥 Importar jornada desde Excel</h3>' +
               '<p class="qa-hint">Sube tu Excel (hoja «Partidos»; opcionalmente «Pronosticos» y «Global») o pega aquí las celdas A:J de Partidos copiadas de Excel.</p>' +
               '<input type="file" id="qa-imp-file" accept=".xlsx,.xls,.csv" />' +
@@ -188,7 +196,7 @@
     return res.json();
   }
 
-  /* ---------- Normalización de lo que hay en el Sheet ---------- */
+  /* ---------- Normalización de lo que hay guardado ---------- */
   function limpiaRes(v) {
     v = (v == null ? "" : String(v)).trim().toUpperCase();
     return (v === "1" || v === "X" || v === "2") ? v : "";
@@ -198,7 +206,7 @@
     return /^[0-2M]-[0-2M]$/.test(v) ? v : "";
   }
 
-  /* ---------- Apertura / cierre ---------- */
+  /* ---------- Apertura / cierre del panel ---------- */
   function abrir() {
     overlay.style.display = "flex";
     if (ADMIN_PASS) { mostrarPanel(); return; }
@@ -260,10 +268,11 @@
     $("qa-panel").style.display = "block";
     $("qa-contenido").style.display = "none";
     setMsg("qa-carga-msg", "Cargando datos...");
-    setMsg("qa-rotar-msg", ""); setMsg("qa-res-msg", "");
+    setMsg("qa-rotar-msg", ""); setMsg("qa-res-msg", ""); setMsg("qa-cierre-msg", "");
     try {
       DATA = await leerDatos();
       setMsg("qa-carga-msg", "");
+      pintarEstado();
       pintarEspecial();
       pintarPartidos();
       pintarPremios(); pintarGlobal();
@@ -277,6 +286,44 @@
   function pintarEspecial() {
     $("qa-especial").textContent = DATA.usuarioEspecial ? "⭐ " + DATA.usuarioEspecial : "Sin usuario especial";
   }
+
+  /* ---------- Abrir / cerrar la quiniela (manual) ---------- */
+  function pintarEstado() {
+    var ab = !DATA || DATA.abierta !== false;
+    var el = $("qa-estado");
+    var t = ab ? "🟢 Quiniela ABIERTA" : "🔒 Quiniela CERRADA";
+    if (ab && DATA && DATA.cierre) {
+      t += " · cuenta atrás hasta el " + new Date(DATA.cierre).toLocaleString("es-ES", { weekday: "long", hour: "2-digit", minute: "2-digit" });
+    }
+    el.textContent = t;
+    el.className = "qa-estado " + (ab ? "abierta" : "cerrada");
+  }
+  async function cambiarEstado(accion, pregunta, okMsg) {
+    if (!confirm(pregunta)) return;
+    var b1 = $("qa-abrir"), b2 = $("qa-cerrar-q");
+    b1.disabled = true; b2.disabled = true;
+    setMsg("qa-cierre-msg", "Guardando...");
+    try {
+      var r = await post({ action: accion });
+      if (r.resultado === "ok") {
+        DATA.abierta = r.abierta;
+        DATA.cierre = r.abierta ? (r.cierre || null) : null;
+        pintarEstado();
+        setMsg("qa-cierre-msg", okMsg, "ok");
+      } else {
+        setMsg("qa-cierre-msg", r.error || "Error", "err");
+      }
+    } catch (e) {
+      setMsg("qa-cierre-msg", "Error de conexión", "err");
+    }
+    b1.disabled = false; b2.disabled = false;
+  }
+  $("qa-abrir").onclick = function () {
+    cambiarEstado("abrirQuiniela", "¿Abrir la quiniela? Los jugadores podrán enviar pronósticos y el cronómetro contará hasta el viernes a las 20:00.", "✅ Quiniela abierta");
+  };
+  $("qa-cerrar-q").onclick = function () {
+    cambiarEstado("cerrarQuiniela", "¿Cerrar la quiniela? Nadie podrá enviar pronósticos hasta que la abras de nuevo.", "✅ Quiniela cerrada");
+  };
 
   /* ---------- Boleto: casillas 1 X 2 y pleno al 15 ---------- */
   var plL = "", plV = "";   // marcador del pleno al 15 (0, 1, 2, M o "")
@@ -362,7 +409,7 @@
     }
     actualizarContador();
 
-    // Pleno al 15 (fila 16 del Sheet): una columna 0/1/2/M por cada equipo
+    // Pleno al 15 (fila 16 de los datos): una columna 0/1/2/M por cada equipo
     var p15 = partidos[15];
     var caja = $("qa-pleno");
     if (p15) {
@@ -617,27 +664,13 @@
       var r = await post({ action: "importar", partidos: IMP.partidos, pronosticos: IMP.pronosticos, global: IMP.global, vaciar: $("qa-imp-vaciar").checked });
       if (r.resultado === "ok") {
         DATA = await leerDatos();
-        pintarEspecial(); pintarPartidos(); pintarPremios(); pintarGlobal();
+        pintarEstado(); pintarEspecial(); pintarPartidos(); pintarPremios(); pintarGlobal();
         $("qa-imp-file").value = ""; $("qa-imp-text").value = "";
-        setMsg("qa-imp-msg", "✅ Importado: " + r.partidos + " partidos y " + r.jugadores + " jugadores. Recarga la página principal para verlo.", "ok");
+        setMsg("qa-imp-msg", "✅ Importado: " + r.partidos + " partidos y " + r.jugadores + " jugadores. Recuerda pulsar «Abrir quiniela» cuando quieras que se pueda jugar.", "ok");
       } else setMsg("qa-imp-msg", r.error || "Error", "err");
     } catch (e) { setMsg("qa-imp-msg", e.message || "Error", "err"); }
     btn.disabled = false;
   };
-
-  /* ---------- Cerrar la quiniela ahora ---------- */
-  $("qa-cierre-ya").onclick = async function () {
-    if (!confirm("¿Cerrar la quiniela ahora? Nadie podrá enviar pronósticos hasta que importes la próxima jornada.")) return;
-    var btn = $("qa-cierre-ya");
-    btn.disabled = true;
-    setMsg("qa-cierre-msg", "Cerrando...");
-    try {
-      var r = await post({ action: "cerrarAhora" });
-      setMsg("qa-cierre-msg", r.resultado === "ok" ? "✅ Quiniela cerrada. Se reabrirá al importar la próxima jornada." : (r.error || "Error"), r.resultado === "ok" ? "ok" : "err");
-    } catch (e) { setMsg("qa-cierre-msg", "Error de conexión", "err"); }
-    btn.disabled = false;
-  };
-
 
   /* ---------- Premios ---------- */
   function pintarPremios() {
