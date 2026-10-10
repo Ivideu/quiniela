@@ -136,6 +136,15 @@
     .cal-btn:hover { background: rgba(255,255,255,.28); }
     .cal-btn:active { transform: scale(.97); }
 
+    /* Quiniela cerrada: sustituye al cronómetro */
+    .suerte {
+      margin-top: 18px; padding: 20px 12px; border-radius: 14px;
+      background: rgba(255,255,255,.18); backdrop-filter: blur(4px);
+      font-size: 26px; font-weight: 800; letter-spacing: .3px;
+      animation: pop .5s cubic-bezier(.3,1.5,.5,1);
+    }
+    @keyframes pop { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+
     /* Quién va ganando: clasificación */
     .lider {
       display: block; margin: 20px 0 16px; padding: 16px 18px;
@@ -254,13 +263,16 @@
       <h1>Tu Quiniela</h1>
       <p class="tagline" id="tagline">¡Que empiece la jornada!</p>
 
-      <div class="countdown" aria-live="off">
-        <div><strong id="cd-d">00</strong><small>días</small></div>
-        <div><strong id="cd-h">00</strong><small>horas</small></div>
-        <div><strong id="cd-m">00</strong><small>min</small></div>
-        <div><strong id="cd-s">00</strong><small>seg</small></div>
+      <div id="cdBloque">
+        <div class="countdown" aria-live="off">
+          <div><strong id="cd-d">00</strong><small>días</small></div>
+          <div><strong id="cd-h">00</strong><small>horas</small></div>
+          <div><strong id="cd-m">00</strong><small>min</small></div>
+          <div><strong id="cd-s">00</strong><small>seg</small></div>
+        </div>
+        <p class="countdown-label" id="cdLabel">Tiempo para rellenar y echar la quiniela</p>
       </div>
-      <p class="countdown-label" id="cdLabel">Tiempo para rellenar y echar la quiniela</p>
+      <div class="suerte" id="suerte" style="display:none">🍀 ¡La suerte está echada!!</div>
       <button type="button" class="cal-btn" id="btnCal">📅 Avisarme (solo esta jornada)</button>
     </header>
 
@@ -337,16 +349,15 @@
       }, 4000);
     })();
 
-    /* ---- Cuenta atrás + estado de la jornada (lo decide el servidor) ----
-       El cierre real se calcula en netlify/functions/api.mjs (viernes 20:00 Madrid).
-       Las constantes de abajo solo se usan mientras el servidor no tenga un cierre
-       guardado (hasta la primera importación de partidos). */
+    /* ---- Cuenta atrás + estado de la quiniela ----
+       Abrir y cerrar es MANUAL (botones del panel admin). Con la quiniela abierta el cronómetro
+       cuenta hasta el viernes 20:00 (Madrid), fecha que fija el servidor al abrirla. Con la
+       quiniela cerrada se muestra «¡La suerte está echada!!» en lugar del cronómetro.
+       Las constantes de abajo solo se usan si el servidor aún no tiene fecha guardada. */
     (function () {
       var DIA = 6, HORA = 12, MIN = 0;   // inicio de la jornada (0=domingo ... 6=sábado)
-      var AVISO_HORAS = 16;              // el contador termina 16 h antes
+      var AVISO_HORAS = 16;              // el contador termina 16 h antes (viernes 20:00)
       window.QUINIELA_CFG = { DIA: DIA, HORA: HORA, MIN: MIN, AVISO_HORAS: AVISO_HORAS };
-
-      var objetivo = null, desfase = 0, cerrada = false, servidor = false;
 
       function proxima() {
         var n = new Date(), t = new Date(n);
@@ -356,11 +367,14 @@
         while (aviso <= n) aviso = new Date(aviso.getTime() + 7 * 86400 * 1000);
         return aviso.getTime();
       }
-      objetivo = proxima();
+
+      var objetivo = proxima(), desfase = 0, cerrada = false, servidor = false;
 
       var tile = document.getElementById('tileEnviar');
       var sub = tile.querySelector('.sub'), subOrig = sub.textContent;
       var label = document.getElementById('cdLabel'), labelOrig = label.textContent;
+      var bloque = document.getElementById('cdBloque');
+      var suerte = document.getElementById('suerte');
       var btnCal = document.getElementById('btnCal');
 
       function aplicarEstado() {
@@ -369,29 +383,35 @@
           tile.removeAttribute('href');
           tile.setAttribute('aria-disabled', 'true');
           sub.textContent = '🔒 Cerrada hasta la próxima jornada';
-          label.textContent = 'Quiniela cerrada. Se abrirá con la próxima jornada';
+          bloque.style.display = 'none';
+          suerte.style.display = 'block';
           btnCal.style.display = 'none';
         } else {
           tile.classList.remove('cerrado');
           tile.setAttribute('href', 'enviar.html');
           tile.removeAttribute('aria-disabled');
           sub.textContent = subOrig;
-          label.textContent = labelOrig;
+          bloque.style.display = '';
+          suerte.style.display = 'none';
           btnCal.style.display = '';
         }
       }
 
       function pad(n) { return String(n).padStart(2, '0'); }
       function tick() {
+        if (cerrada) return;
         var ms = objetivo - (Date.now() + desfase);
         if (ms <= 0) {
           if (servidor) {
-            if (!cerrada) { cerrada = true; aplicarEstado(); }
-            ms = 0;
+            ms = 0;   // plazo cumplido, pero la quiniela solo se cierra con el botón del admin
+            label.textContent = '⏰ Plazo cumplido: la quiniela se cerrará en breve';
           } else {
             objetivo = proxima();
             ms = objetivo - Date.now();
+            label.textContent = labelOrig;
           }
+        } else {
+          label.textContent = labelOrig;
         }
         var s = Math.floor(ms / 1000);
         document.getElementById('cd-d').textContent = pad(Math.floor(s / 86400));
@@ -408,9 +428,13 @@
               servidor = true;
               objetivo = d.cierre;
               desfase = (d.ahora || Date.now()) - Date.now();   // corrige relojes mal puestos
-              var nueva = d.abierta === false;
-              if (nueva !== cerrada) { cerrada = nueva; aplicarEstado(); }
+            } else if (servidor) {
+              servidor = false;
+              objetivo = proxima();
+              desfase = 0;
             }
+            var nueva = d.abierta === false;
+            if (nueva !== cerrada) { cerrada = nueva; aplicarEstado(); }
             tick();
           })
           .catch(function () {});
@@ -419,7 +443,7 @@
       tick();
       setInterval(tick, 1000);
       cargarEstado();
-      setInterval(cargarEstado, 60000);   // si el admin importa una jornada nueva, se reabre sola
+      setInterval(cargarEstado, 30000);   // se entera solo cuando el admin abre o cierra la quiniela
     })();
 
     /* ---- Quién va ganando: mini clasificación (misma lógica que pronosticos.html) ---- */

@@ -59,7 +59,8 @@ function usuarioEspecial(d) {
   return (c.usuarioEspecial && c.semana === claveSemana()) ? c.usuarioEspecial : especialSemanal(d);
 }
 
-/* ---------- Cierre de la jornada (viernes 20:00 Madrid = 16 h antes del sábado 12:00) ---------- */
+/* ---------- Abrir / cerrar la quiniela: MANUAL desde el panel admin.
+   La fecha (viernes 20:00 Madrid) solo sirve para la cuenta atrás de la pantalla principal. ---------- */
 const CIERRE_DIA = 5, CIERRE_HORA = 20, CIERRE_MIN = 0;   // 0=domingo ... 5=viernes
 
 function partesMadrid(ms) {
@@ -90,7 +91,13 @@ function proximoCierre(desde) {
   }
   return null;
 }
-const cerrada = d => { const c = Number((d.config || {}).cierre); return !!c && Date.now() >= c; };
+const cerrada = d => {
+  const c = d.config || {};
+  if (c.abierta === true) return false;
+  if (c.abierta === false) return true;
+  const t = Number(c.cierre);            // datos anteriores al modo manual: se respeta lo que hubiera
+  return !!t && Date.now() >= t;
+};
 
 /* ---------- Cálculos (antes eran fórmulas del Sheet) ---------- */
 function aciertos(d, fila) {
@@ -124,7 +131,7 @@ function respuestaGET(d) {
     usuarioEspecial: usuarioEspecial(d),
     datosPartido15: { local: p15[1] || "", visitante: p15[2] || "" },
     abierta: !cerrada(d),
-    cierre: Number((d.config || {}).cierre) || null,
+    cierre: (!cerrada(d) && Number((d.config || {}).cierre)) || null,   // destino de la cuenta atrás (solo con la quiniela abierta)
     ahora: Date.now()
   };
 }
@@ -201,26 +208,25 @@ async function admin(data) {
     }
     case "importar": {
       try {
-        if (data.partidos) {
-          d.partidos = normPartidos(data.partidos);
-          // Jornada nueva: se fija el próximo cierre (viernes 20:00 Madrid) y la quiniela se reabre
-          d.config = { ...(d.config || {}), cierre: proximoCierre(Date.now()) };
-        }
+        if (data.partidos) d.partidos = normPartidos(data.partidos);
         if (data.vaciar && !data.pronosticos) d.pronosticos = [HEAD_PRON, ...d.pronosticos.slice(1).map(f => [f[0], ...Array(15).fill("")])];
         if (data.pronosticos) d.pronosticos = normPronosticos(data.pronosticos);
         if (data.global) d.global = normGlobal(data.global);
       } catch (e) { return json({ resultado: "error", error: e.message }); }
       await guardar(d);
-      return json({ resultado: "ok", partidos: d.partidos.length - 1, jugadores: d.pronosticos.length - 1, cierre: (d.config || {}).cierre || null });
+      return json({ resultado: "ok", partidos: d.partidos.length - 1, jugadores: d.pronosticos.length - 1 });
     }
-    /**Botón cerrar ahora */
-      case "cerrarAhora": {
-      d.config = { ...(d.config || {}), cierre: Date.now() };
+    case "abrirQuiniela": {
+      const cierre = proximoCierre(Date.now());   // la cuenta atrás cuenta hasta el próximo viernes 20:00 (Madrid)
+      d.config = { ...(d.config || {}), abierta: true, cierre };
       await guardar(d);
-      return json({ resultado: "ok", cierre: d.config.cierre });
+      return json({ resultado: "ok", abierta: true, cierre });
     }
-
-
+    case "cerrarQuiniela": {
+      d.config = { ...(d.config || {}), abierta: false };
+      await guardar(d);
+      return json({ resultado: "ok", abierta: false });
+    }
     case "guardarGlobal": {
       try { d.global = normGlobal(data.global); } catch (e) { return json({ resultado: "error", error: e.message }); }
       await guardar(d);
