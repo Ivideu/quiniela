@@ -4,7 +4,7 @@
    (validada en el servidor, Netlify) y permite:
      · abrir / cerrar la quiniela a mano
      · rotar al azar el usuario especial ⭐
-     · poner los resultados de la jornada
+     · poner los resultados de la jornada (a mano o buscándolos en API-Football, con aviso al terminar un partido)
      · importar la jornada desde Excel
      · victorias totales y premios del escrutinio
      · tener a la vista una capa de REFERENCIA con los resultados reales
@@ -42,6 +42,11 @@
     ".qa-estado{text-align:center;font-size:1.15em;font-weight:bold;border-radius:10px;padding:12px;border:2px solid #b3d7ff;background:#f8fbff;color:#003366}",
     ".qa-estado.abierta{background:#e8f6ec;border-color:#9bd3ac;color:#155724}",
     ".qa-estado.cerrada{background:#fdecee;border-color:#f0aab2;color:#8a1520}",
+    ".qa-livebox{border:2px solid #b3d7ff;border-radius:10px;background:#f8fbff;padding:8px 10px;font-size:13px;color:#333}",
+    ".qa-lrow{padding:4px 0;border-bottom:1px dashed #d5e4f3;line-height:1.3}",
+    ".qa-lrow:last-child{border-bottom:0}",
+    ".qa-lrow.mal{color:#c82333;font-weight:bold}",
+    ".qa-lrow.tit{font-weight:bold;color:#003366;margin-top:4px}",
     /* Boleto de quiniela */
     ".qa-boleto{background:#fff6f4;border:3px solid #d62839;border-radius:12px;overflow:hidden;color:#b01e2c}",
     ".qa-bol-head{background:#d62839;color:#fff;padding:10px 12px;text-align:center}",
@@ -134,6 +139,13 @@
               '<button type="button" class="qa-verde" id="qa-abrir">🔓 Abrir quiniela</button>' +
               '<button type="button" class="qa-rojo" id="qa-cerrar-q">🔒 Cerrar quiniela</button>' +
               '<div class="qa-msg" id="qa-cierre-msg"></div>' +
+              '<h3>📡 Resultados en directo</h3>' +
+              '<p class="qa-hint">Consulta los marcadores y rellena solo los partidos que ya han terminado (resultado a los 90 minutos). Comprueba siempre el resultado oficial.</p>' +
+              '<div class="qa-livebox" id="qa-live-estado">Cargando…</div>' +
+              '<label class="qa-chk"><input type="checkbox" id="qa-live-auto" /> Actualizar solo (cada 10 min, de viernes a lunes desde las 12:00)</label>' +
+              '<button type="button" id="qa-live-ahora">🔄 Buscar resultados ahora</button>' +
+              '<button type="button" class="qa-sec" id="qa-live-notif" style="display:none">🔔 Activar notificaciones del navegador</button>' +
+              '<div class="qa-msg" id="qa-live-msg"></div>' +
               '<h3>⭐ Usuario especial</h3>' +
               '<div class="qa-especial" id="qa-especial">-</div>' +
               '<button type="button" class="qa-gold" id="qa-rotar">🎲 Rotar al azar</button>' +
@@ -277,6 +289,7 @@
       pintarPartidos();
       pintarPremios(); pintarGlobal();
       $("qa-contenido").style.display = "block";
+      iniciarLive();
       restaurarReferencia();
     } catch (e) {
       setMsg("qa-carga-msg", "No se pudieron cargar los datos", "err");
@@ -324,6 +337,155 @@
   $("qa-cerrar-q").onclick = function () {
     cambiarEstado("cerrarQuiniela", "¿Cerrar la quiniela? Nadie podrá enviar pronósticos hasta que la abras de nuevo.", "✅ Quiniela cerrada");
   };
+
+  /* ---------- Resultados en directo (API-Football) + aviso al terminar un partido ---------- */
+  var LIVE = null;          // última respuesta de "estadoLive"
+  var VISTOS = null;        // resultados que el panel ya conocía
+  var VIGILANDO = false;
+  var ICONO = { fin: "✅", vivo: "🟢", prog: "🕒", nada: "❓" };
+
+  function nomCorto(t) { return String(t == null ? "" : t).replace(/\s*\(.*$/, ""); }
+  function hace(ts) {
+    var m = Math.max(0, Math.round((Date.now() - ts) / 60000));
+    return m < 1 ? "hace un momento" : (m < 60 ? "hace " + m + " min" : "hace " + Math.round(m / 60) + " h");
+  }
+  function fotoResultados(datos) {
+    var o = {};
+    ((datos && datos.partidos) || []).forEach(function (p, i) {
+      if (i < 1 || i > 15 || !p) return;
+      var v = String(p[3] == null ? "" : p[3]).trim().toUpperCase();
+      if (v && v !== "-") o[i] = v;
+    });
+    return o;
+  }
+  function beep() {
+    try {
+      var C = window.AudioContext || window.webkitAudioContext;
+      var ctx = new C(), o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = "sine"; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.15, ctx.currentTime);
+      o.start(); o.stop(ctx.currentTime + 0.35);
+      setTimeout(function () { ctx.close(); }, 600);
+    } catch (e) {}
+  }
+  function avisar(texto) {
+    beep();
+    setMsg("qa-live-msg", "⚽ " + texto, "ok");
+    try {
+      if ("Notification" in window && Notification.permission === "granted") new Notification("⚽ Partido terminado", { body: texto });
+    } catch (e) {}
+  }
+
+  function pintarLive() {
+    var box = $("qa-live-estado");
+    box.innerHTML = "";
+    function linea(txt, cls) {
+      var d = document.createElement("div");
+      d.className = "qa-lrow" + (cls ? " " + cls : "");
+      d.textContent = txt;
+      box.appendChild(d);
+    }
+    if (!LIVE) { linea("Cargando…"); return; }
+    $("qa-live-auto").checked = !!LIVE.auto;
+    if (!LIVE.clave) {
+      linea("⚠️ Falta la variable FOOTBALL_API_KEY en Netlify (la clave se consigue gratis en api-football.com).", "mal");
+      return;
+    }
+    var l = LIVE.live;
+    var uso = LIVE.uso ? "consultas hoy: " + LIVE.uso.n + "/" + LIVE.max + (LIVE.uso.restantes != null ? " (a la API le quedan " + LIVE.uso.restantes + ")" : "") : "sin consultas todavía";
+    linea(l && l.ts ? "Última búsqueda " + hace(l.ts) + " · " + uso : "Aún no se ha buscado nada · " + uso);
+    if (l && l.ok === false && l.error) linea("⚠️ " + l.error, "mal");
+    if (l && l.estado && l.estado.length) {
+      l.estado.forEach(function (e) {
+        var p = DATA && DATA.partidos && DATA.partidos[e.n];
+        var nombre = p ? nomCorto(p[1]) + " – " + nomCorto(p[2]) : "Partido " + e.n;
+        var det = e.est === "fin" ? "terminado " + e.marcador
+          : e.est === "vivo" ? "en juego " + e.marcador + (e.min ? " (" + e.min + "')" : "")
+          : e.est === "prog" ? "sin empezar" : "no lo encuentro en la API";
+        linea((ICONO[e.est] || "") + " " + e.n + ". " + nombre + " · " + det);
+      });
+    }
+    if (l && l.log && l.log.length) {
+      linea("Últimos resultados rellenados", "tit");
+      l.log.slice(-5).reverse().forEach(function (x) { linea(hace(x.ts) + ": " + x.texto); });
+    }
+  }
+
+  async function cargarLive() {
+    try {
+      var r = await post({ action: "estadoLive" });
+      if (r.resultado === "ok") { LIVE = r; pintarLive(); }
+    } catch (e) {}
+  }
+
+  $("qa-live-auto").onchange = async function () {
+    var activo = this.checked, box = this;
+    setMsg("qa-live-msg", "Guardando...");
+    try {
+      var r = await post({ action: "autoResultados", activo: activo });
+      if (r.resultado === "ok") {
+        if (LIVE) LIVE.auto = r.auto;
+        setMsg("qa-live-msg", r.auto ? "✅ Actualización automática activada" : "Actualización automática desactivada", "ok");
+      } else { box.checked = !activo; setMsg("qa-live-msg", r.error || "Error", "err"); }
+    } catch (e) { box.checked = !activo; setMsg("qa-live-msg", "Error de conexión", "err"); }
+  };
+
+  $("qa-live-ahora").onclick = async function () {
+    var btn = $("qa-live-ahora");
+    btn.disabled = true;
+    setMsg("qa-live-msg", "Buscando resultados...");
+    try {
+      var r = await post({ action: "buscarResultados" });
+      if (r.resultado === "ok") {
+        DATA = await leerDatos();
+        VISTOS = fotoResultados(DATA);
+        pintarPartidos();
+        await cargarLive();
+        var n = (r.cambios || []).length;
+        setMsg("qa-live-msg", n ? "✅ " + n + (n === 1 ? " resultado rellenado" : " resultados rellenados") + ". Revísalos en el boleto de abajo." : (r.mensaje || "No hay resultados nuevos"), "ok");
+      } else {
+        setMsg("qa-live-msg", r.error || "Error", "err");
+        await cargarLive();
+      }
+    } catch (e) { setMsg("qa-live-msg", "Error de conexión", "err"); }
+    btn.disabled = false;
+  };
+
+  $("qa-live-notif").onclick = function () {
+    try { Notification.requestPermission().then(function () { $("qa-live-notif").style.display = "none"; }); } catch (e) {}
+  };
+
+  // Cada minuto (con el panel iniciado, esté visible o no) mira si ha aparecido un resultado nuevo y avisa
+  async function vigilar() {
+    if (!ADMIN_PASS || !DATA) return;
+    try {
+      var nuevos = await leerDatos();
+      var foto = fotoResultados(nuevos);
+      var cambiados = [];
+      if (VISTOS) {
+        Object.keys(foto).forEach(function (k) { if (VISTOS[k] !== foto[k]) cambiados.push(k); });
+      }
+      VISTOS = foto;
+      DATA = nuevos;
+      if (cambiados.length) {
+        var textos = cambiados.map(function (k) {
+          var p = nuevos.partidos[k];
+          return nomCorto(p[1]) + " – " + nomCorto(p[2]) + ": " + foto[k];
+        });
+        avisar(textos.join(" · "));
+        pintarPartidos();
+      }
+      cargarLive();
+    } catch (e) {}
+  }
+
+  function iniciarLive() {
+    VISTOS = fotoResultados(DATA);
+    cargarLive();
+    $("qa-live-notif").style.display = ("Notification" in window && Notification.permission === "default") ? "block" : "none";
+    if (!VIGILANDO) { VIGILANDO = true; setInterval(vigilar, 60000); }
+  }
 
   /* ---------- Boleto: casillas 1 X 2 y pleno al 15 ---------- */
   var plL = "", plV = "";   // marcador del pleno al 15 (0, 1, 2, M o "")
@@ -544,6 +706,7 @@
       var r = await post({ action: "guardarResultados", resultados: resultados, p15: p15 });
       if (r.resultado === "ok") {
         setMsg("qa-res-msg", "✅ Resultados guardados", "ok");
+        leerDatos().then(function (d2) { DATA = d2; VISTOS = fotoResultados(d2); }).catch(function () {});
       } else {
         setMsg("qa-res-msg", r.error || "Error", "err");
       }
@@ -665,6 +828,7 @@
       if (r.resultado === "ok") {
         DATA = await leerDatos();
         pintarEstado(); pintarEspecial(); pintarPartidos(); pintarPremios(); pintarGlobal();
+        VISTOS = fotoResultados(DATA); cargarLive();
         $("qa-imp-file").value = ""; $("qa-imp-text").value = "";
         setMsg("qa-imp-msg", "✅ Importado: " + r.partidos + " partidos y " + r.jugadores + " jugadores. Recuerda pulsar «Abrir quiniela» cuando quieras que se pueda jugar.", "ok");
       } else setMsg("qa-imp-msg", r.error || "Error", "err");
