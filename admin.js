@@ -342,7 +342,7 @@
   var LIVE = null;          // última respuesta de "estadoLive"
   var VISTOS = null;        // resultados que el panel ya conocía
   var VIGILANDO = false;
-  var ICONO = { fin: "✅", vivo: "🟢", prog: "🕒", nada: "❓" };
+  var ICONO = { fin: "✅", vivo: "🟢", prog: "🕒", susp: "⚠️", nada: "❓" };
 
   function nomCorto(t) { return String(t == null ? "" : t).replace(/\s*\(.*$/, ""); }
   function hace(ts) {
@@ -402,7 +402,7 @@
         var nombre = p ? nomCorto(p[1]) + " – " + nomCorto(p[2]) : "Partido " + e.n;
         var det = e.est === "fin" ? "terminado " + e.marcador
           : e.est === "vivo" ? "en juego " + e.marcador + (e.min ? " (" + e.min + "')" : "")
-          : e.est === "prog" ? "sin empezar" : "no lo encuentro en la API";
+          : e.est === "prog" ? "sin empezar" : e.est === "susp" ? "aplazado o suspendido" : "no lo encuentro en la API";
         linea((ICONO[e.est] || "") + " " + e.n + ". " + nombre + " · " + det);
       });
     }

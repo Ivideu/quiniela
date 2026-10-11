@@ -240,11 +240,12 @@ function leerFixture(f) {
   const corto = st.short || "";
   const fin = ["FT", "AET", "PEN"].includes(corto);
   const vivo = ["1H", "HT", "2H", "ET", "BT", "P", "INT", "LIVE", "SUSP"].includes(corto);
+  const susp = ["PST", "CANC", "ABD", "AWD", "WO"].includes(corto);
   const g = f.goals || {}, ft = (f.score && f.score.fulltime) || {};
   // Resultado a los 90 minutos (sin prórroga ni penaltis) cuando el partido ha terminado
   const gl = fin && ft.home != null && ft.away != null ? ft.home : g.home;
   const gv = fin && ft.home != null && ft.away != null ? ft.away : g.away;
-  return { local: equipoApi(f.teams && f.teams.home && f.teams.home.name), visit: equipoApi(f.teams && f.teams.away && f.teams.away.name), fin, vivo, min: st.elapsed, gl, gv };
+  return { local: equipoApi(f.teams && f.teams.home && f.teams.home.name), visit: equipoApi(f.teams && f.teams.away && f.teams.away.name), fin, vivo, susp, min: st.elapsed, gl, gv };
 }
 
 const signoDe = (a, b) => a > b ? "1" : a < b ? "2" : "X";
@@ -275,11 +276,23 @@ export async function actualizarResultados({ forzar = false } = {}) {
   if (uso0 >= LIVE_MAX_DIA) return { ok: false, mensaje: "Tope de consultas de hoy alcanzado (" + uso0 + ")", cambios: [] };
 
   const f2 = n => String(n).padStart(2, "0");
-  const fechas = [p.year + "-" + f2(p.month) + "-" + f2(p.day)];
-  if (+p.hour < 9) {   // partidos de madrugada: también los de ayer
-    const ay = new Date(Date.UTC(+p.year, +p.month - 1, +p.day - 1));
-    fechas.push(ay.getUTCFullYear() + "-" + f2(ay.getUTCMonth() + 1) + "-" + f2(ay.getUTCDate()));
+  const fechaDe = desfase => {
+    const x = new Date(Date.UTC(+p.year, +p.month - 1, +p.day + desfase));
+    return x.getUTCFullYear() + "-" + f2(x.getUTCMonth() + 1) + "-" + f2(x.getUTCDate());
+  };
+  let fechas = [];
+  if (forzar) {
+    // Búsqueda manual: toda la jornada (desde el viernes hasta hoy y, salvo el lunes, mañana),
+    // para encontrar partidos de otros días de la misma jornada
+    const atras = { 5: 0, 6: 1, 0: 2, 1: 3 }[dow];
+    const desde = atras === undefined ? 0 : -atras;
+    const hasta = dow === 1 ? 0 : 1;
+    for (let k = desde; k <= hasta; k++) fechas.push(fechaDe(k));
+  } else {
+    fechas = [fechaDe(0)];
+    if (+p.hour < 9) fechas.push(fechaDe(-1));   // partidos de madrugada: también los de ayer
   }
+  if (uso0 + fechas.length > LIVE_MAX_DIA) return { ok: false, mensaje: "Hoy quedan pocas consultas (" + uso0 + "/" + LIVE_MAX_DIA + "). Inténtalo mañana", cambios: [] };
 
   let fixtures = [], restantes = null, usadas = 0;
   try {
@@ -308,6 +321,7 @@ export async function actualizarResultados({ forzar = false } = {}) {
       if (a >= 0.8 && b >= 0.8 && a + b > mejorS) { mejorS = a + b; mejor = fx; }
     });
     if (!mejor) { estado.push({ n: i, est: "nada" }); return; }
+    if (mejor.susp) { estado.push({ n: i, est: "susp" }); return; }
     if (mejor.gl == null || mejor.gv == null) { estado.push({ n: i, est: "prog" }); return; }
     const marcador = mejor.gl + "-" + mejor.gv;
     if (mejor.fin) {
