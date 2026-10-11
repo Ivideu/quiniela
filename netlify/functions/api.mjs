@@ -284,8 +284,10 @@ export async function actualizarResultados({ forzar = false } = {}) {
   if (forzar) {
     // Búsqueda manual: toda la jornada (desde el viernes hasta hoy y, salvo el lunes, mañana),
     // para encontrar partidos de otros días de la misma jornada
+    // El plan gratis de la API solo da ayer, hoy y mañana. Con un plan de pago, FOOTBALL_API_ATRAS=3 amplía a toda la jornada
+    const maxAtras = Math.max(0, Number(process.env.FOOTBALL_API_ATRAS ?? 1) || 0);
     const atras = { 5: 0, 6: 1, 0: 2, 1: 3 }[dow];
-    const desde = atras === undefined ? 0 : -atras;
+    const desde = atras === undefined ? 0 : -Math.min(atras, maxAtras);
     const hasta = dow === 1 ? 0 : 1;
     for (let k = desde; k <= hasta; k++) fechas.push(fechaDe(k));
   } else {
@@ -294,20 +296,28 @@ export async function actualizarResultados({ forzar = false } = {}) {
   }
   if (uso0 + fechas.length > LIVE_MAX_DIA) return { ok: false, mensaje: "Hoy quedan pocas consultas (" + uso0 + "/" + LIVE_MAX_DIA + "). Inténtalo mañana", cambios: [] };
 
-  let fixtures = [], restantes = null, usadas = 0;
-  try {
-    for (const fecha of fechas) {
+  let fixtures = [], restantes = null, usadas = 0, correctas = 0;
+  const errores = [];
+  for (const fecha of fechas) {
+    try {
       const r = await llamarApi("/fixtures", { date: fecha, timezone: "Europe/Madrid" });
-      usadas++;
+      usadas++; correctas++;
       fixtures = fixtures.concat(r.lista);
       if (r.restantes !== null) restantes = r.restantes;
+    } catch (e) {
+      usadas++;
+      errores.push(e.message);
+      // Una fecha fuera del plan no impide mirar las demás; cualquier otro error corta la búsqueda
+      if (!/access to this date/i.test(e.message)) break;
     }
-  } catch (e) {
+  }
+  if (!correctas) {
+    const msg = errores[0] || "No se pudo consultar la API";
     const dd = await leer();
     const prev = (dd.config || {}).live || {};
-    dd.config = { ...(dd.config || {}), apiUso: { dia, n: uso0 + usadas, restantes }, live: { ...prev, ts: Date.now(), ok: false, error: e.message } };
+    dd.config = { ...(dd.config || {}), apiUso: { dia, n: uso0 + usadas, restantes }, live: { ...prev, ts: Date.now(), ok: false, error: msg } };
     await guardar(dd);
-    return { ok: false, mensaje: e.message, cambios: [] };
+    return { ok: false, mensaje: msg, cambios: [] };
   }
 
   const lista = fixtures.map(leerFixture);

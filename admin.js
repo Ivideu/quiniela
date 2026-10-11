@@ -402,7 +402,7 @@
         var nombre = p ? nomCorto(p[1]) + " – " + nomCorto(p[2]) : "Partido " + e.n;
         var det = e.est === "fin" ? "terminado " + e.marcador
           : e.est === "vivo" ? "en juego " + e.marcador + (e.min ? " (" + e.min + "')" : "")
-          : e.est === "prog" ? "sin empezar" : e.est === "susp" ? "aplazado o suspendido" : "no lo encuentro en la API";
+          : e.est === "prog" ? "sin empezar" : e.est === "susp" ? "aplazado o suspendido" : "no lo encuentro en la API (¿día fuera del plan gratis?)";
         linea((ICONO[e.est] || "") + " " + e.n + ". " + nombre + " · " + det);
       });
     }
