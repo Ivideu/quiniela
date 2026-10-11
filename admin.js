@@ -344,6 +344,13 @@
     } catch (e) {}
   }
 
+  function motivoNada(e, l) {
+    if (e.cerca) return "no coincide el nombre: la API lo llama «" + e.cerca + "» (avísame para añadirlo)";
+    var f = (l && l.fechas && l.fechas.length) ? " (días consultados: " + l.fechas.map(function (x) { return x.slice(8) + "/" + x.slice(5, 7); }).join(", ") + ")" : "";
+    if (l && l.errores && l.errores.length) return "su día no está disponible en el plan gratis" + f + " → ponlo a mano en el boleto";
+    return "no aparece en los días consultados" + f + ": probablemente se jugó otro día que el plan gratis no permite → ponlo a mano en el boleto";
+  }
+
   function pintarLive() {
     var box = $("qa-live-estado");
     box.innerHTML = "";
@@ -369,7 +376,7 @@
         var nombre = p ? nomCorto(p[1]) + " – " + nomCorto(p[2]) : "Partido " + e.n;
         var det = e.est === "fin" ? "terminado " + e.marcador
           : e.est === "vivo" ? "en juego " + e.marcador + (e.min ? " (" + e.min + "')" : "")
-          : e.est === "prog" ? "sin empezar" : e.est === "susp" ? "aplazado o suspendido" : "no lo encuentro en la API (¿día fuera del plan gratis?)";
+          : e.est === "prog" ? "sin empezar" : e.est === "susp" ? "aplazado o suspendido" : motivoNada(e, l);
         linea((ICONO[e.est] || "") + " " + e.n + ". " + nombre + " · " + det);
       });
     }

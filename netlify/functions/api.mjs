@@ -245,7 +245,7 @@ function leerFixture(f) {
   // Resultado a los 90 minutos (sin prórroga ni penaltis) cuando el partido ha terminado
   const gl = fin && ft.home != null && ft.away != null ? ft.home : g.home;
   const gv = fin && ft.home != null && ft.away != null ? ft.away : g.away;
-  return { local: equipoApi(f.teams && f.teams.home && f.teams.home.name), visit: equipoApi(f.teams && f.teams.away && f.teams.away.name), fin, vivo, susp, min: st.elapsed, gl, gv };
+  return { local: equipoApi(f.teams && f.teams.home && f.teams.home.name), visit: equipoApi(f.teams && f.teams.away && f.teams.away.name), nl: str(f.teams && f.teams.home && f.teams.home.name), nv: str(f.teams && f.teams.away && f.teams.away.name), fin, vivo, susp, min: st.elapsed, gl, gv };
 }
 
 const signoDe = (a, b) => a > b ? "1" : a < b ? "2" : "X";
@@ -330,7 +330,16 @@ export async function actualizarResultados({ forzar = false } = {}) {
       const a = similitud(ql, fx.local), b = similitud(qv, fx.visit);
       if (a >= 0.8 && b >= 0.8 && a + b > mejorS) { mejorS = a + b; mejor = fx; }
     });
-    if (!mejor) { estado.push({ n: i, est: "nada" }); return; }
+    if (!mejor) {
+      // Diagnóstico: si la API tiene un partido donde coincide UN equipo, probablemente es solo un nombre distinto
+      let cerca = null, cs = 0;
+      lista.forEach(fx => {
+        const a = similitud(ql, fx.local), b = similitud(qv, fx.visit);
+        if (Math.max(a, b) >= 0.8 && a + b > cs) { cs = a + b; cerca = fx.nl + " – " + fx.nv; }
+      });
+      estado.push({ n: i, est: "nada", cerca });
+      return;
+    }
     if (mejor.susp) { estado.push({ n: i, est: "susp" }); return; }
     if (mejor.gl == null || mejor.gv == null) { estado.push({ n: i, est: "prog" }); return; }
     const marcador = mejor.gl + "-" + mejor.gv;
@@ -358,7 +367,7 @@ export async function actualizarResultados({ forzar = false } = {}) {
   });
   const prev = (d.config || {}).live || {};
   const log = (prev.log || []).concat(aplicados.map(a => ({ ts: Date.now(), n: a.n, texto: a.local + " " + a.marcador + " " + a.visitante + " → " + a.valor }))).slice(-30);
-  d.config = { ...(d.config || {}), apiUso: { dia, n: uso0 + usadas, restantes }, live: { ts: Date.now(), ok: true, estado, log } };
+  d.config = { ...(d.config || {}), apiUso: { dia, n: uso0 + usadas, restantes }, live: { ts: Date.now(), ok: true, estado, log, fechas, errores } };
   await guardar(d);
 
   const sinEmp = estado.filter(e => e.est === "nada").map(e => e.n);
