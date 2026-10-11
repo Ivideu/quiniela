@@ -7,7 +7,6 @@
      · poner los resultados de la jornada (a mano o buscándolos en API-Football, con aviso al terminar un partido)
      · importar la jornada desde Excel
      · victorias totales y premios del escrutinio
-     · tener a la vista una capa de REFERENCIA con los resultados reales
    Uso: <script src="admin.js"></script> al final del <body>.
    ===================================================================== */
 (function () {
@@ -16,15 +15,12 @@
   var API_URL = "/api";
   var ADMIN_PASS = "";   // solo en memoria; nunca se guarda
   var DATA = null;       // última copia de datos leída del servidor
-  var WIDGET_ID = "5299f18ec310a025d89539a159cc45c327e605ba9604";   // widget de combinacionganadora.com
-  var widgetCargado = false;
 
   /* ---------- Estilos (acotados a #qa-overlay para no chocar con la página) ---------- */
   var css = [
     "#qa-overlay{display:none;position:fixed;inset:0;background:rgba(0,20,40,.65);z-index:10000;justify-content:center;align-items:flex-start;overflow-y:auto;padding:16px;font-family:'Segoe UI',Tahoma,sans-serif}",
     "#qa-overlay *{box-sizing:border-box}",
-    "#qa-box{background:#fff;border-radius:14px;width:100%;max-width:560px;padding:22px;margin:16px 0;box-shadow:0 15px 40px rgba(0,0,0,.35);color:#222}",
-    "#qa-box.qa-wide{max-width:1180px}",
+    "#qa-box{background:#fff;border-radius:14px;width:100%;max-width:640px;padding:22px;margin:16px 0;box-shadow:0 15px 40px rgba(0,0,0,.35);color:#222}",
     "#qa-box h2{margin:0 0 14px;text-align:center;color:#003366;border:0;padding:0;text-transform:none;font-size:1.4em}",
     "#qa-box h3{margin:22px 0 10px;color:#003366;border-bottom:2px solid #b3d7ff;padding-bottom:6px;font-size:1.05em}",
     "#qa-box h3:first-child{margin-top:0}",
@@ -75,17 +71,6 @@
     "#qa-box button.qa-link{width:auto;margin:0;padding:4px 8px;background:transparent;color:#d62839;text-decoration:underline;font-size:13px}",
     "#qa-box button.qa-link:hover{background:#ffe1e3;color:#a8101f}",
     "h1[data-qa-trigger]{cursor:default;user-select:none;-webkit-user-select:none}",
-    /* Capa de referencia */
-    "#qa-cols{display:block}",
-    "@media (min-width:900px){#qa-box.qa-wide #qa-cols{display:grid;grid-template-columns:1.15fr 1fr;gap:22px;align-items:start}#qa-col-ref{position:sticky;top:8px}}",
-    "#qa-col-ref{margin-bottom:18px}",
-    "#qa-ref{border:2px solid #b3d7ff;border-radius:12px;padding:12px;background:#f8fbff}",
-    "#qa-ref>summary{cursor:pointer;font-weight:bold;color:#003366;font-size:1.05em}",
-    ".qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}",
-    ".qa-links a{flex:1 1 auto;text-align:center;padding:8px 10px;border-radius:8px;background:#e3f2fd;color:#0056b3;text-decoration:none;font-size:13px;font-weight:bold;border:1px solid #b3d7ff}",
-    ".qa-links a:hover{background:#cfe7fb}",
-    "#qa-wbox{margin-top:10px}",
-    "#qa-wbox iframe{width:100%;height:420px;border:1px solid #b3d7ff;border-radius:8px;background:#fff}",
     /* Importar Excel */
     ".qa-hint{font-size:13px;color:#555;margin:0 0 8px}",
     "#qa-box textarea{width:100%;padding:10px;margin-top:8px;border:2px dashed #7fb4ea;border-radius:8px;font:12px monospace;background:#f8fbff;resize:vertical}",
@@ -121,69 +106,54 @@
         '<h2>⚙️ Panel admin</h2>' +
         '<div class="qa-msg" id="qa-carga-msg"></div>' +
         '<div id="qa-contenido" style="display:none">' +
-          '<div id="qa-cols">' +
-            '<div id="qa-col-ref">' +
-              '<details id="qa-ref" open>' +
-                '<summary>📺 Resultados de referencia</summary>' +
-                '<div class="qa-links">' +
-                  '<a id="qa-ref-abrir" href="https://www.combinacionganadora.com/quiniela/" target="_blank" rel="noopener noreferrer">↗ Jornada en pestaña nueva</a>' +
-                  '<a id="qa-ref-recargar" href="#">↻ Recargar</a>' +
-                '</div>' +
-                '<div id="qa-wbox"></div>' +
-                '<div class="qa-msg" id="qa-ref-msg"></div>' +
-              '</details>' +
+          '<h3>🔓 Abrir / cerrar la quiniela</h3>' +
+          '<div class="qa-estado" id="qa-estado">-</div>' +
+          '<button type="button" class="qa-verde" id="qa-abrir">🔓 Abrir quiniela</button>' +
+          '<button type="button" class="qa-rojo" id="qa-cerrar-q">🔒 Cerrar quiniela</button>' +
+          '<div class="qa-msg" id="qa-cierre-msg"></div>' +
+          '<h3>📡 Resultados en directo</h3>' +
+          '<p class="qa-hint">Consulta los marcadores y rellena solo los partidos que ya han terminado (resultado a los 90 minutos). Comprueba siempre el resultado oficial.</p>' +
+          '<div class="qa-livebox" id="qa-live-estado">Cargando…</div>' +
+          '<label class="qa-chk"><input type="checkbox" id="qa-live-auto" /> Actualizar solo (cada 10 min, de viernes a lunes desde las 12:00)</label>' +
+          '<button type="button" id="qa-live-ahora">🔄 Buscar resultados ahora</button>' +
+          '<button type="button" class="qa-sec" id="qa-live-notif" style="display:none">🔔 Activar notificaciones del navegador</button>' +
+          '<div class="qa-msg" id="qa-live-msg"></div>' +
+          '<h3>⭐ Usuario especial</h3>' +
+          '<div class="qa-especial" id="qa-especial">-</div>' +
+          '<button type="button" class="qa-gold" id="qa-rotar">🎲 Rotar al azar</button>' +
+          '<div class="qa-msg" id="qa-rotar-msg"></div>' +
+          '<h3>🎟️ Boleto de resultados</h3>' +
+          '<div class="qa-boleto">' +
+            '<div class="qa-bol-head"><b>LA QUINIELA</b><span>1 gana local · X empate · 2 gana visitante</span></div>' +
+            '<div id="qa-lista"></div>' +
+            '<div id="qa-pleno" style="display:none">' +
+              '<div class="qa-pl-title">🔥 PLENO AL 15</div>' +
+              '<div class="qa-pl-match" id="qa-pleno-label"></div>' +
+              '<div class="qa-pl-grid"><div class="qa-pl-eq" id="qa-pl-l"></div><div class="qa-pl-eq" id="qa-pl-v"></div></div>' +
+              '<div class="qa-pl-res" id="qa-pl-res"></div>' +
             '</div>' +
-            '<div id="qa-col-main">' +
-              '<h3>🔓 Abrir / cerrar la quiniela</h3>' +
-              '<div class="qa-estado" id="qa-estado">-</div>' +
-              '<button type="button" class="qa-verde" id="qa-abrir">🔓 Abrir quiniela</button>' +
-              '<button type="button" class="qa-rojo" id="qa-cerrar-q">🔒 Cerrar quiniela</button>' +
-              '<div class="qa-msg" id="qa-cierre-msg"></div>' +
-              '<h3>📡 Resultados en directo</h3>' +
-              '<p class="qa-hint">Consulta los marcadores y rellena solo los partidos que ya han terminado (resultado a los 90 minutos). Comprueba siempre el resultado oficial.</p>' +
-              '<div class="qa-livebox" id="qa-live-estado">Cargando…</div>' +
-              '<label class="qa-chk"><input type="checkbox" id="qa-live-auto" /> Actualizar solo (cada 10 min, de viernes a lunes desde las 12:00)</label>' +
-              '<button type="button" id="qa-live-ahora">🔄 Buscar resultados ahora</button>' +
-              '<button type="button" class="qa-sec" id="qa-live-notif" style="display:none">🔔 Activar notificaciones del navegador</button>' +
-              '<div class="qa-msg" id="qa-live-msg"></div>' +
-              '<h3>⭐ Usuario especial</h3>' +
-              '<div class="qa-especial" id="qa-especial">-</div>' +
-              '<button type="button" class="qa-gold" id="qa-rotar">🎲 Rotar al azar</button>' +
-              '<div class="qa-msg" id="qa-rotar-msg"></div>' +
-              '<h3>🎟️ Boleto de resultados</h3>' +
-              '<div class="qa-boleto">' +
-                '<div class="qa-bol-head"><b>LA QUINIELA</b><span>1 gana local · X empate · 2 gana visitante</span></div>' +
-                '<div id="qa-lista"></div>' +
-                '<div id="qa-pleno" style="display:none">' +
-                  '<div class="qa-pl-title">🔥 PLENO AL 15</div>' +
-                  '<div class="qa-pl-match" id="qa-pleno-label"></div>' +
-                  '<div class="qa-pl-grid"><div class="qa-pl-eq" id="qa-pl-l"></div><div class="qa-pl-eq" id="qa-pl-v"></div></div>' +
-                  '<div class="qa-pl-res" id="qa-pl-res"></div>' +
-                '</div>' +
-                '<div class="qa-bol-foot"><span id="qa-contador">Marcados: 0/14</span><button type="button" class="qa-link" id="qa-borrar">Borrar todo</button></div>' +
-              '</div>' +
-              '<button type="button" id="qa-guardar">💾 Guardar resultados</button>' +
-              '<div class="qa-msg" id="qa-res-msg"></div>' +
-              '<h3>📥 Importar jornada desde Excel</h3>' +
-              '<p class="qa-hint">Sube tu Excel (hoja «Partidos»; opcionalmente «Pronosticos» y «Global») o pega aquí las celdas A:J de Partidos copiadas de Excel.</p>' +
-              '<input type="file" id="qa-imp-file" accept=".xlsx,.xls,.csv" />' +
-              '<textarea id="qa-imp-text" rows="4" placeholder="…o pega aquí las celdas copiadas de Excel (con o sin la fila de cabecera)"></textarea>' +
-              '<label class="qa-chk"><input type="checkbox" id="qa-imp-vaciar" /> Nueva jornada: vaciar las apuestas de los jugadores (se mantienen los nombres)</label>' +
-              '<button type="button" class="qa-sec" id="qa-imp-prev">👁 Previsualizar</button>' +
-              '<div id="qa-imp-preview"></div>' +
-              '<button type="button" id="qa-imp-go">📥 Importar a la base de datos</button>' +
-              '<div class="qa-msg" id="qa-imp-msg"></div>' +
-              '<h3>🏆 Victorias totales (clasificación general)</h3>' +
-              '<p class="qa-hint">Suma una victoria al ganador de la quiniela con «+» y guarda.</p>' +
-              '<div id="qa-glob"></div>' +
-              '<button type="button" id="qa-glob-go">Guardar victorias</button>' +
-              '<div class="qa-msg" id="qa-glob-msg"></div>' +
-              '<h3>💶 Premios del escrutinio (€)</h3>' +
-              '<div class="qa-prem" id="qa-premios"></div>' +
-              '<button type="button" id="qa-premios-go">Guardar premios</button>' +
-              '<div class="qa-msg" id="qa-premios-msg"></div>' +
-            '</div>' +
+            '<div class="qa-bol-foot"><span id="qa-contador">Marcados: 0/14</span><button type="button" class="qa-link" id="qa-borrar">Borrar todo</button></div>' +
           '</div>' +
+          '<button type="button" id="qa-guardar">💾 Guardar resultados</button>' +
+          '<div class="qa-msg" id="qa-res-msg"></div>' +
+          '<h3>📥 Importar jornada desde Excel</h3>' +
+          '<p class="qa-hint">Sube tu Excel (hoja «Partidos»; opcionalmente «Pronosticos» y «Global») o pega aquí las celdas A:J de Partidos copiadas de Excel.</p>' +
+          '<input type="file" id="qa-imp-file" accept=".xlsx,.xls,.csv" />' +
+          '<textarea id="qa-imp-text" rows="4" placeholder="…o pega aquí las celdas copiadas de Excel (con o sin la fila de cabecera)"></textarea>' +
+          '<label class="qa-chk"><input type="checkbox" id="qa-imp-vaciar" /> Nueva jornada: vaciar las apuestas de los jugadores (se mantienen los nombres)</label>' +
+          '<button type="button" class="qa-sec" id="qa-imp-prev">👁 Previsualizar</button>' +
+          '<div id="qa-imp-preview"></div>' +
+          '<button type="button" id="qa-imp-go">📥 Importar a la base de datos</button>' +
+          '<div class="qa-msg" id="qa-imp-msg"></div>' +
+          '<h3>🏆 Victorias totales (clasificación general)</h3>' +
+          '<p class="qa-hint">Suma una victoria al ganador de la quiniela con «+» y guarda.</p>' +
+          '<div id="qa-glob"></div>' +
+          '<button type="button" id="qa-glob-go">Guardar victorias</button>' +
+          '<div class="qa-msg" id="qa-glob-msg"></div>' +
+          '<h3>💶 Premios del escrutinio (€)</h3>' +
+          '<div class="qa-prem" id="qa-premios"></div>' +
+          '<button type="button" id="qa-premios-go">Guardar premios</button>' +
+          '<div class="qa-msg" id="qa-premios-msg"></div>' +
         '</div>' +
         '<button type="button" class="qa-sec" id="qa-cerrar">Cerrar</button>' +
       '</div>' +
@@ -222,7 +192,6 @@
   function abrir() {
     overlay.style.display = "flex";
     if (ADMIN_PASS) { mostrarPanel(); return; }
-    $("qa-box").classList.remove("qa-wide");
     $("qa-login").style.display = "block";
     $("qa-panel").style.display = "none";
     $("qa-pass").value = "";
@@ -275,7 +244,6 @@
 
   /* ---------- Panel ---------- */
   async function mostrarPanel() {
-    $("qa-box").classList.add("qa-wide");
     $("qa-login").style.display = "none";
     $("qa-panel").style.display = "block";
     $("qa-contenido").style.display = "none";
@@ -290,7 +258,6 @@
       pintarPremios(); pintarGlobal();
       $("qa-contenido").style.display = "block";
       iniciarLive();
-      restaurarReferencia();
     } catch (e) {
       setMsg("qa-carga-msg", "No se pudieron cargar los datos", "err");
     }
@@ -609,57 +576,6 @@
     plL = ""; plV = "";
     actualizarPleno(); actualizarContador();
     setMsg("qa-res-msg", "");
-  };
-
-  /* ---------- Resultados de referencia: widget de combinacionganadora.com ---------- */
-  // El widget vive en widget.html (página propia) y se muestra en un iframe; solo se carga al abrir el panel.
-  function fechaJornada() {
-    // Próximo domingo (o hoy si es domingo): día del sorteo de la jornada actual
-    var d = new Date();
-    d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
-    var p = function (n) { return (n < 10 ? "0" : "") + n; };
-    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
-  }
-  function cargarWidget() {
-    var det = $("qa-ref");
-    $("qa-ref-abrir").href = "https://www.combinacionganadora.com/quiniela/resultados/" + fechaJornada() + "/";
-    if (!det.open || widgetCargado) return;
-    widgetCargado = true;
-    var fr = document.createElement("iframe");
-    fr.setAttribute("title", "Resultados La Quiniela");
-    fr.src = "widget.html";
-    $("qa-wbox").innerHTML = "";
-    $("qa-wbox").appendChild(fr);
-    autoAjuste(fr);
-    setMsg("qa-ref-msg", "Si el cuadro sale vacío, usa «Jornada en pestaña nueva».", "");
-  }
-  // Ajuste automático de ancho y alto de un iframe de esta misma web (el widget se dibuja tarde y cambia de tamaño)
-  function autoAjuste(fr) {
-    var timer = setInterval(function () {
-      if (!fr.isConnected) { clearInterval(timer); return; }
-      try {
-        var d = fr.contentDocument;
-        if (!d || !d.body) return;
-        var z = parseFloat(d.body.style.zoom) || 1;
-        var natural = d.documentElement.scrollWidth / z;
-        var w = fr.clientWidth;
-        if (natural > w + 2) { z = Math.max(0.3, w / natural); } else { z = 1; }
-        if (Math.abs((parseFloat(d.body.style.zoom) || 1) - z) > 0.01) d.body.style.zoom = z;
-        var h = Math.max(d.body.scrollHeight, d.body.offsetHeight);
-        if (h > 100 && Math.abs(h - fr.offsetHeight) > 4) fr.style.height = (h + 20) + "px";
-      } catch (e) { clearInterval(timer); }
-    }, 500);
-  }
-  function restaurarReferencia() {
-    if (window.matchMedia && !window.matchMedia("(min-width:900px)").matches) $("qa-ref").open = false;
-    cargarWidget();
-  }
-  $("qa-ref").addEventListener("toggle", cargarWidget);
-  $("qa-ref-recargar").onclick = function (e) {
-    e.preventDefault();
-    widgetCargado = false;
-    $("qa-wbox").innerHTML = "";
-    cargarWidget();
   };
 
   /* ---------- Rotar usuario especial ---------- */
