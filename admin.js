@@ -346,9 +346,9 @@
 
   function motivoNada(e, l) {
     if (e.cerca) return "no coincide el nombre: la API lo llama «" + e.cerca + "» (avísame para añadirlo)";
-    var f = (l && l.fechas && l.fechas.length) ? " (días consultados: " + l.fechas.map(function (x) { return x.slice(8) + "/" + x.slice(5, 7); }).join(", ") + ")" : "";
-    if (l && l.errores && l.errores.length) return "su día no está disponible en el plan gratis" + f + " → ponlo a mano en el boleto";
-    return "no aparece en los días consultados" + f + ": probablemente se jugó otro día que el plan gratis no permite → ponlo a mano en el boleto";
+    var f = (l && l.fechas && l.fechas.length) ? l.fechas.map(function (x) { return x.slice(8) + "/" + x.slice(5, 7); }).join(", ") : "";
+    return "aún no aparece en la API (días mirados: " + f + "). Si se juega otro día, se buscará ese día; si ya terminó, ponlo a mano en el boleto" +
+      ((l && l.errores && l.errores.length) ? " · la API dio error en: " + l.errores.join(" | ") : "");
   }
 
   function pintarLive() {
