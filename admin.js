@@ -376,7 +376,7 @@
         var nombre = p ? nomCorto(p[1]) + " – " + nomCorto(p[2]) : "Partido " + e.n;
         var det = e.est === "fin" ? "terminado " + e.marcador
           : e.est === "vivo" ? "en juego " + e.marcador + (e.min ? " (" + e.min + "')" : "")
-          : e.est === "prog" ? "sin empezar" : e.est === "susp" ? "aplazado o suspendido" : motivoNada(e, l);
+          : e.est === "prog" ? "sin empezar" + (e.fecha ? " (se juega el " + e.fecha.slice(8) + "/" + e.fecha.slice(5, 7) + ")" : "") : e.est === "susp" ? "aplazado o suspendido" : motivoNada(e, l);
         linea((ICONO[e.est] || "") + " " + e.n + ". " + nombre + " · " + det);
       });
     }

@@ -245,7 +245,7 @@ function leerFixture(f) {
   // Resultado a los 90 minutos (sin prórroga ni penaltis) cuando el partido ha terminado
   const gl = fin && ft.home != null && ft.away != null ? ft.home : g.home;
   const gv = fin && ft.home != null && ft.away != null ? ft.away : g.away;
-  return { local: equipoApi(f.teams && f.teams.home && f.teams.home.name), visit: equipoApi(f.teams && f.teams.away && f.teams.away.name), nl: str(f.teams && f.teams.home && f.teams.home.name), nv: str(f.teams && f.teams.away && f.teams.away.name), fin, vivo, susp, min: st.elapsed, gl, gv };
+  return { local: equipoApi(f.teams && f.teams.home && f.teams.home.name), visit: equipoApi(f.teams && f.teams.away && f.teams.away.name), fecha: str(f.fixture && f.fixture.date).slice(0, 10), nl: str(f.teams && f.teams.home && f.teams.home.name), nv: str(f.teams && f.teams.away && f.teams.away.name), fin, vivo, susp, min: st.elapsed, gl, gv };
 }
 
 const signoDe = (a, b) => a > b ? "1" : a < b ? "2" : "X";
@@ -293,6 +293,8 @@ export async function actualizarResultados({ forzar = false } = {}) {
   } else {
     fechas = [fechaDe(0)];
     if (+p.hour < 9) fechas.push(fechaDe(-1));   // partidos de madrugada: también los de ayer
+    // Partidos pendientes que se sabe que se jugaron ayer (la búsqueda manual guarda el día de cada partido)
+    if (!fechas.includes(fechaDe(-1)) && pendientes.some(n => (c0.fixFecha || {})[n] === fechaDe(-1))) fechas.push(fechaDe(-1));
   }
   if (uso0 + fechas.length > LIVE_MAX_DIA) return { ok: false, mensaje: "Hoy quedan pocas consultas (" + uso0 + "/" + LIVE_MAX_DIA + "). Inténtalo mañana", cambios: [] };
 
@@ -321,7 +323,7 @@ export async function actualizarResultados({ forzar = false } = {}) {
   }
 
   const lista = fixtures.map(leerFixture);
-  const estado = [], cambios = [];
+  const estado = [], cambios = [], nuevasFechas = {};
   pendientes.forEach(i => {
     const fila = d.partidos[i];
     const ql = equipoQuiniela(fila[1]), qv = equipoQuiniela(fila[2]);
@@ -331,15 +333,19 @@ export async function actualizarResultados({ forzar = false } = {}) {
       if (a >= 0.8 && b >= 0.8 && a + b > mejorS) { mejorS = a + b; mejor = fx; }
     });
     if (!mejor) {
+      // Si se sabe que ese partido es de otro día (visto en una búsqueda manual), no es un error: aún no toca mirarlo
+      const fd = (c0.fixFecha || {})[i];
+      if (fd && !fechas.includes(fd)) { estado.push({ n: i, est: "prog", fecha: fd }); return; }
       // Diagnóstico: si la API tiene un partido donde coincide UN equipo, probablemente es solo un nombre distinto
       let cerca = null, cs = 0;
       lista.forEach(fx => {
         const a = similitud(ql, fx.local), b = similitud(qv, fx.visit);
-        if (Math.max(a, b) >= 0.8 && a + b > cs) { cs = a + b; cerca = fx.nl + " – " + fx.nv; }
+        if (Math.max(a, b) >= 0.8 && Math.min(a, b) >= 0.3 && a + b > cs) { cs = a + b; cerca = fx.nl + " – " + fx.nv; }
       });
       estado.push({ n: i, est: "nada", cerca });
       return;
     }
+    nuevasFechas[i] = mejor.fecha;
     if (mejor.susp) { estado.push({ n: i, est: "susp" }); return; }
     if (mejor.gl == null || mejor.gv == null) { estado.push({ n: i, est: "prog" }); return; }
     const marcador = mejor.gl + "-" + mejor.gv;
@@ -367,7 +373,7 @@ export async function actualizarResultados({ forzar = false } = {}) {
   });
   const prev = (d.config || {}).live || {};
   const log = (prev.log || []).concat(aplicados.map(a => ({ ts: Date.now(), n: a.n, texto: a.local + " " + a.marcador + " " + a.visitante + " → " + a.valor }))).slice(-30);
-  d.config = { ...(d.config || {}), apiUso: { dia, n: uso0 + usadas, restantes }, live: { ts: Date.now(), ok: true, estado, log, fechas, errores } };
+  d.config = { ...(d.config || {}), apiUso: { dia, n: uso0 + usadas, restantes }, fixFecha: { ...((d.config || {}).fixFecha || {}), ...nuevasFechas }, live: { ts: Date.now(), ok: true, estado, log, fechas, errores } };
   await guardar(d);
 
   const sinEmp = estado.filter(e => e.est === "nada").map(e => e.n);
@@ -419,7 +425,7 @@ async function admin(data) {
     }
     case "importar": {
       try {
-        if (data.partidos) d.partidos = normPartidos(data.partidos);
+        if (data.partidos) { d.partidos = normPartidos(data.partidos); d.config = { ...(d.config || {}), fixFecha: {}, live: null }; }
         if (data.vaciar && !data.pronosticos) d.pronosticos = [HEAD_PRON, ...d.pronosticos.slice(1).map(f => [f[0], ...Array(15).fill("")])];
         if (data.pronosticos) d.pronosticos = normPronosticos(data.pronosticos);
         if (data.global) d.global = normGlobal(data.global);
