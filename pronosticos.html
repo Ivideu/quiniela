@@ -317,7 +317,7 @@
       }
     }
 
-    // ---------- Lectura de alta velocidad y ritmo continuo ----------
+    // ---------- Lectura en voz normal sin pausas entre signos ----------
     const btnVoz = document.getElementById("btnVoz");
     let leyendo = false;
     let tokenVoz = 0;
@@ -325,12 +325,12 @@
     const dicSigno = { "1": "uno", "X": "equis", "2": "dos" };
     const dicGoles = { "0": "cero", "1": "uno", "2": "dos", "M": "más" };
 
-    function hablar(texto, pausaMs) {
+    function hablar(texto) {
       return new Promise(resolve => {
         const u = new SpeechSynthesisUtterance(texto);
         u.lang = "es-ES";
-        u.rate = 1.6; // Velocidad muy alta
-        u.onend = () => setTimeout(resolve, pausaMs || 0);
+        u.rate = 1.0; // Velocidad de voz natural/normal
+        u.onend = () => resolve();
         u.onerror = () => resolve();
         speechSynthesis.speak(u);
       });
@@ -363,21 +363,27 @@
 
       for (const { j } of orden) {
         if (!vigente()) return;
-        await hablar(j.nombre, 60); // Solo dice el nombre para ir directos al ritmo
 
-        for (let i = 1; i <= 14; i++) {
-          if (!vigente()) return;
-          const a = norm(j.ap[i]);
-          await hablar(dicSigno[a] || "v", 0); // Sin pausa intermedia, encadenado al instante
-        }
-
+        // 1. Decir el nombre de la columna
+        await hablar(j.nombre);
         if (!vigente()) return;
+
+        // 2. Unir los 14 signos en una única frase separada por comas para que lo lea de seguido
+        const listaSignos = [];
+        for (let i = 1; i <= 14; i++) {
+          const a = norm(j.ap[i]);
+          listaSignos.push(dicSigno[a] || "vacío");
+        }
+        await hablar(listaSignos.join(", "));
+        if (!vigente()) return;
+
+        // 3. Decir el pleno al 15
         const p = normPleno(j.ap[15]);
         if (esPleno(p)) {
           const [l, v] = p.split("-");
-          await hablar(dicGoles[l] + " " + dicGoles[v], 100);
+          await hablar(dicGoles[l] + ", " + dicGoles[v]);
         } else {
-          await hablar("sin", 100);
+          await hablar("sin pleno");
         }
       }
 
