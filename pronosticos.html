@@ -60,7 +60,7 @@
     .salio.pleno { color: #ffd700; letter-spacing: 1px; font-size: 14px; padding: 0 9px; }
     .salio.nada { background: #fff; color: #9fb3c8; border: 2px dashed #c3d3e4; box-shadow: none; font-weight: normal; }
 
-    /* ---------- Las apuestas: verde = acierto, rojo = fallo, azul claro = sin resultado ---------- */
+    /* ---------- Las apuestas ---------- */
     .signo, .marcador { display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 800; }
     .signo { width: 34px; height: 34px; font-size: 17px; }
     .marcador { padding: 5px 9px; font-size: 14px; letter-spacing: 1px; }
@@ -90,6 +90,10 @@
     .btn-volver { display: inline-block; margin-top: 25px; background: #0077cc; color: white !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; }
     .btn-volver:hover { background: #005fa3; }
 
+    /* Botón oculto de lectura por voz (situado al principio para asegurar su carga y visibilidad) */
+    #btnVoz { position: fixed; right: 6px; bottom: 6px; width: 38px; height: 38px; border: 0; border-radius: 50%; background: #003366; color: #fff; font-size: 18px; cursor: pointer; opacity: .04; z-index: 9999; }
+    #btnVoz.hablando { opacity: .8; background: #c82333; }
+
     @media (max-width: 640px) {
       body { padding: 8px; } .container { padding: 14px; border-radius: 10px; }
       td.partido { min-width: 176px; max-width: 176px; padding: 6px 6px; } .hora { font-size: 9px; max-width: 42px; } .pt { gap: 5px; } .eq { font-size: 11px; } .eq .vs { display: none; }
@@ -100,6 +104,9 @@
   </style>
 </head>
 <body>
+  <!-- Botón de voz colocado antes para garantizar su presencia inmediata -->
+  <button id="btnVoz" type="button" aria-label="Leer pronósticos en voz alta">🔊</button>
+
   <script src="nav.js"></script>
   <div class="container">
     <div class="portada">
@@ -130,9 +137,9 @@
 
   <script>
     const API_URL = "/api";
-
+    let jugadoresVoz = [];   // columnas tal y como se ven en pantalla
     const norm = v => (v === null || v === undefined) ? "" : String(v).trim().toUpperCase();
-    const normPleno = v => norm(v).replace(/\s/g, "");                 // "2 - 1" -> "2-1"
+    const normPleno = v => norm(v).replace(/\s/g, "");                   // "2 - 1" -> "2-1"
     const esResultado = v => v === "1" || v === "X" || v === "2";
     const esPleno = v => /^[0-2M]-[0-2M]$/.test(v);
     const equipo = t => String(t == null ? "" : t).replace(/\s*\(.*$/, "").trim();   // quita "(M) (15º)"
@@ -144,14 +151,12 @@
       return e;
     }
 
-    // Limpieza de fechas ISO por si acaso (igual que antes)
     function limpiar(v) {
       let val = (v === null || v === undefined) ? "" : v;
       if (val.toString().includes("T") && val.toString().includes("Z")) val = "";
       return val.toString().trim();
     }
 
-    // Celda de un jugador: la apuesta, en verde si acertó, en rojo si falló, neutra si aún no hay resultado
     function celdaApuesta(apuesta, salio, esPlenoFila) {
       const td = el("td", "col");
       const a = esPlenoFila ? normPleno(apuesta) : norm(apuesta);
@@ -166,7 +171,6 @@
       return td;
     }
 
-    // Primera columna: número, equipos y lo que ha salido
     function celdaPartido(num, local, visitante, salio, esPlenoFila, hora) {
       const td = el("td", "partido");
       const pt = el("div", "pt");
@@ -197,7 +201,6 @@
           return;
         }
 
-        // Lo que ha salido en cada partido (columna D del Sheet); "" si todavía no hay resultado
         const salio = [];
         let total = 0, pendientes = 0;
         for (let i = 1; i <= 14; i++) {
@@ -208,7 +211,6 @@
         }
         const salio15 = partidos[15] && esPleno(normPleno(partidos[15][3])) ? normPleno(partidos[15][3]) : "";
 
-        // Jugadores = filas con nombre (la fila 0 es la cabecera) + sus aciertos y fallos
         const jugadores = filas.slice(1)
           .filter(f => f && f[0] !== null && f[0] !== undefined && String(f[0]).trim() !== "")
           .map(f => {
@@ -220,11 +222,11 @@
             }
             return j;
           });
-        jugadores.sort((a, b) => b.ok - a.ok);          // el que más aciertos lleva, primero (empates: orden del Sheet)
+        jugadores.sort((a, b) => b.ok - a.ok);
+        jugadoresVoz = jugadores;
 
         document.getElementById("resumen").textContent = jugadores.length + (jugadores.length === 1 ? " jugador" : " jugadores") + " · 14 partidos + pleno al 15";
 
-        // Cuántos partidos faltan por salir (sobre los 14)
         const aviso = document.getElementById("pendientes");
         if (total) {
           aviso.style.display = "block";
@@ -234,7 +236,6 @@
             : (pendientes === 1 ? "Queda 1 de " + total + " partidos por salir" : "Quedan " + pendientes + " de " + total + " partidos por salir");
         }
 
-        // 1) Cabecera: "Partido / Salió" + un botón por jugador con sus aciertos
         const header = document.getElementById("headerRow");
         header.innerHTML = "";
         header.appendChild(el("th", "partido", "Partido · Salió"));
@@ -264,7 +265,6 @@
           header.appendChild(th);
         });
 
-        // 2) Cuerpo: una fila por partido (1-14) y la del pleno al 15
         tbody.innerHTML = "";
         for (let i = 1; i <= 15; i++) {
           const p = partidos[i];
@@ -281,7 +281,6 @@
           tbody.appendChild(tr);
         }
 
-        // 3) Pie: total de aciertos de cada jugador
         const tfoot = document.querySelector("#tablaPronosticos tfoot");
         tfoot.innerHTML = "";
         const trf = el("tr");
@@ -301,6 +300,81 @@
         document.getElementById("boleto").replaceChildren(el("div", "msg", "Error de conexión. Revisa la consola."));
       }
     }
+
+    // ---------- Lectura por voz (botón optimizado y más rápido) ----------
+    const btnVoz = document.getElementById("btnVoz");
+    let leyendo = false;
+    let tokenVoz = 0;
+
+    const dicSigno = { "1": "uno", "X": "equis", "2": "dos" };
+    const dicGoles = { "0": "cero", "1": "uno", "2": "dos", "M": "más de dos" };
+
+    function hablar(texto, pausaMs) {
+      return new Promise(resolve => {
+        const u = new SpeechSynthesisUtterance(texto);
+        u.lang = "es-ES";
+        u.rate = 1.1; // Velocidad ligeramente mayor para agilizar
+        u.onend = () => setTimeout(resolve, pausaMs || 0);
+        u.onerror = () => resolve();
+        speechSynthesis.speak(u);
+      });
+    }
+
+    function detenerVoz() {
+      tokenVoz++;
+      leyendo = false;
+      speechSynthesis.cancel();
+      btnVoz.classList.remove("hablando");
+    }
+
+    async function leerPronosticos() {
+      if (leyendo) { detenerVoz(); return; }
+      if (!("speechSynthesis" in window)) { alert("Este navegador no admite lectura por voz."); return; }
+
+      const llenas = jugadoresVoz
+        .map((j, idx) => ({ j, idx }))
+        .filter(({ j }) => j.ap.some((v, i) => i >= 1 && norm(v) !== ""));
+      if (!llenas.length) return;
+
+      let inicio = llenas.findIndex(({ j }) => normPleno(j.ap[15]) !== "");
+      if (inicio < 0) inicio = 0;
+      const orden = llenas.slice(inicio).concat(llenas.slice(0, inicio));
+
+      const mi = ++tokenVoz;
+      leyendo = true;
+      btnVoz.classList.add("hablando");
+      const vigente = () => leyendo && mi === tokenVoz;
+
+      for (const { j } of orden) {
+        if (!vigente()) return;
+        await hablar("Columna de " + j.nombre, 400);
+
+        for (let i = 1; i <= 14; i++) {
+          if (!vigente()) return;
+          const a = norm(j.ap[i]);
+          // Solo lee el resultado de manera directa y fluida (ej: "uno", "equis", "dos") sin repetir "Partido N"
+          await hablar(dicSigno[a] || "vacío", 150);
+        }
+
+        if (!vigente()) return;
+        const p = normPleno(j.ap[15]);
+        if (esPleno(p)) {
+          const [l, v] = p.split("-");
+          await hablar("Pleno al quince: local " + dicGoles[l] + ", visitante " + dicGoles[v], 200);
+        } else {
+          await hablar("Pleno al quince: sin apuesta", 200);
+        }
+
+        if (!vigente()) return;
+        await hablar("Fin de " + j.nombre, 800);
+      }
+
+      if (vigente()) { await hablar("Fin de todas las columnas"); detenerVoz(); }
+    }
+
+    btnVoz.addEventListener("click", leerPronosticos);
+    window.addEventListener("beforeunload", () => speechSynthesis.cancel());
+    
     cargar();
   </script>
 </body>
