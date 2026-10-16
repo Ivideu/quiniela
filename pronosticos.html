@@ -90,7 +90,7 @@
     .btn-volver { display: inline-block; margin-top: 25px; background: #0077cc; color: white !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; }
     .btn-volver:hover { background: #005fa3; }
 
-    /* Botón de voz visible (puedes cambiar la opacidad a .04 si lo quieres casi invisible más adelante) */
+    /* Botón de voz visible */
     #btnVoz { 
       position: fixed; 
       right: 20px; 
@@ -317,19 +317,19 @@
       }
     }
 
-    // ---------- Lectura por voz ultra rápida ----------
+    // ---------- Lectura de alta velocidad y ritmo continuo ----------
     const btnVoz = document.getElementById("btnVoz");
     let leyendo = false;
     let tokenVoz = 0;
 
     const dicSigno = { "1": "uno", "X": "equis", "2": "dos" };
-    const dicGoles = { "0": "cero", "1": "uno", "2": "dos", "M": "más de dos" };
+    const dicGoles = { "0": "cero", "1": "uno", "2": "dos", "M": "más" };
 
     function hablar(texto, pausaMs) {
       return new Promise(resolve => {
         const u = new SpeechSynthesisUtterance(texto);
         u.lang = "es-ES";
-        u.rate = 1.4; // Velocidad alta para mayor agilidad
+        u.rate = 1.6; // Velocidad muy alta
         u.onend = () => setTimeout(resolve, pausaMs || 0);
         u.onerror = () => resolve();
         speechSynthesis.speak(u);
@@ -363,28 +363,25 @@
 
       for (const { j } of orden) {
         if (!vigente()) return;
-        await hablar("Columna de " + j.nombre, 150); // Pausa muy breve
+        await hablar(j.nombre, 60); // Solo dice el nombre para ir directos al ritmo
 
         for (let i = 1; i <= 14; i++) {
           if (!vigente()) return;
           const a = norm(j.ap[i]);
-          await hablar(dicSigno[a] || "vacío", 50); // Ritmo fluido inmediato
+          await hablar(dicSigno[a] || "v", 0); // Sin pausa intermedia, encadenado al instante
         }
 
         if (!vigente()) return;
         const p = normPleno(j.ap[15]);
         if (esPleno(p)) {
           const [l, v] = p.split("-");
-          await hablar("Pleno al quince: " + dicGoles[l] + ", " + dicGoles[v], 100);
+          await hablar(dicGoles[l] + " " + dicGoles[v], 100);
         } else {
-          await hablar("Pleno al quince: sin apuesta", 100);
+          await hablar("sin", 100);
         }
-
-        if (!vigente()) return;
-        await hablar("Fin de " + j.nombre, 300); // Pausa corta antes de cambiar de jugador
       }
 
-      if (vigente()) { await hablar("Fin"); detenerVoz(); }
+      if (vigente()) { detenerVoz(); }
     }
 
     btnVoz.addEventListener("click", leerPronosticos);
