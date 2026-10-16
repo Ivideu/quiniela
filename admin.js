@@ -111,6 +111,10 @@
           '<button type="button" class="qa-verde" id="qa-abrir">🔓 Abrir quiniela</button>' +
           '<button type="button" class="qa-rojo" id="qa-cerrar-q">🔒 Cerrar quiniela</button>' +
           '<div class="qa-msg" id="qa-cierre-msg"></div>' +
+          '<h3>🔊 Icono de voz en la web</h3>' +
+          '<label class="qa-chk"><input type="checkbox" id="qa-voz-vis" /> Mostrar el icono flotante del altavoz en la página de pronósticos</label>' +
+          '<button type="button" class="qa-sec" id="qa-voz-go">Guardar preferencia de voz</button>' +
+          '<div class="qa-msg" id="qa-voz-msg"></div>' +
           '<h3>📡 Resultados en directo</h3>' +
           '<p class="qa-hint">Consulta los marcadores y rellena solo los partidos que ya han terminado (resultado a los 90 minutos). Comprueba siempre el resultado oficial.</p>' +
           '<div class="qa-livebox" id="qa-live-estado">Cargando…</div>' +
@@ -248,7 +252,7 @@
     $("qa-panel").style.display = "block";
     $("qa-contenido").style.display = "none";
     setMsg("qa-carga-msg", "Cargando datos...");
-    setMsg("qa-rotar-msg", ""); setMsg("qa-res-msg", ""); setMsg("qa-cierre-msg", "");
+    setMsg("qa-rotar-msg", ""); setMsg("qa-res-msg", ""); setMsg("qa-cierre-msg", ""); setMsg("qa-voz-msg", "");
     try {
       DATA = await leerDatos();
       setMsg("qa-carga-msg", "");
@@ -256,6 +260,7 @@
       pintarEspecial();
       pintarPartidos();
       pintarPremios(); pintarGlobal();
+      $("qa-voz-vis").checked = DATA.vozVisible !== false;
       $("qa-contenido").style.display = "block";
       iniciarLive();
     } catch (e) {
@@ -266,6 +271,26 @@
   function pintarEspecial() {
     $("qa-especial").textContent = DATA.usuarioEspecial ? "⭐ " + DATA.usuarioEspecial : "Sin usuario especial";
   }
+
+  /* ---------- Guardar preferencia de voz ---------- */
+  $("qa-voz-go").onclick = async function () {
+    var activo = $("qa-voz-vis").checked;
+    var btn = $("qa-voz-go");
+    btn.disabled = true;
+    setMsg("qa-voz-msg", "Guardando...");
+    try {
+      var r = await post({ action: "guardarVozConfig", vozVisible: activo });
+      if (r.resultado === "ok") {
+        DATA.vozVisible = r.vozVisible;
+        setMsg("qa-voz-msg", "✅ Preferencia de voz guardada", "ok");
+      } else {
+        setMsg("qa-voz-msg", r.error || "Error", "err");
+      }
+    } catch (e) {
+      setMsg("qa-voz-msg", "Error de conexión", "err");
+    }
+    btn.disabled = false;
+  };
 
   /* ---------- Abrir / cerrar la quiniela (manual) ---------- */
   function pintarEstado() {

@@ -210,6 +210,13 @@
       try {
         const res = await fetch(API_URL, { cache: "no-store" });
         const data = await res.json();
+
+        // Control de visibilidad del botón de voz desde el panel de administración
+        const btnVozEl = document.getElementById("btnVoz");
+        if (btnVozEl) {
+          btnVozEl.style.display = data.vozVisible === false ? "none" : "flex";
+        }
+
         const filas = data.pronosticos;
         const partidos = data.partidos || [];
         if (!filas || filas.length < 2) {

@@ -122,6 +122,7 @@ function escrutinio(d) {
 
 function respuestaGET(d) {
   const p15 = d.partidos[15] || [];
+  const cfg = d.config || {};
   return {
     partidos: d.partidos,
     pronosticos: d.pronosticos.map(f => f.map(c => str(c))),
@@ -131,7 +132,8 @@ function respuestaGET(d) {
     usuarioEspecial: usuarioEspecial(d),
     datosPartido15: { local: p15[1] || "", visitante: p15[2] || "" },
     abierta: !cerrada(d),
-    cierre: (!cerrada(d) && Number((d.config || {}).cierre)) || null,   // destino de la cuenta atrás (solo con la quiniela abierta)
+    cierre: (!cerrada(d) && Number(cfg.cierre)) || null,   // destino de la cuenta atrás (solo con la quiniela abierta)
+    vozVisible: cfg.vozVisible !== false,
     ahora: Date.now()
   };
 }
@@ -456,6 +458,11 @@ async function admin(data) {
       d.config = { ...(d.config || {}), abierta: false };
       await guardar(d);
       return json({ resultado: "ok", abierta: false });
+    }
+    case "guardarVozConfig": {
+      d.config = { ...(d.config || {}), vozVisible: data.vozVisible === true };
+      await guardar(d);
+      return json({ resultado: "ok", vozVisible: d.config.vozVisible });
     }
     case "guardarGlobal": {
       try { d.global = normGlobal(data.global); } catch (e) { return json({ resultado: "error", error: e.message }); }
