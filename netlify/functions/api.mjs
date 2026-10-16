@@ -198,10 +198,12 @@ const PAISES = {
   "catar": "qatar", "qatar": "qatar", "panama": "panama"
 };
 
+// Equipo tal como viene en la quiniela. Es femenino si lleva "(f)", "W" al final o "Women".
 function equipoQuiniela(txt) {
   const raw = String(txt == null ? "" : txt);
-  const fem = /\(\s*f\s*\)/i.test(raw);                                   // "(f)" = femenino
-  const base = sinAcentos(raw.replace(/\(.*?\)/g, " ")).replace(/[^a-z0-9]+/g, " ").trim();
+  const toks = sinAcentos(raw.replace(/\(.*?\)/g, " ")).replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean);
+  const fem = /\(\s*f\s*\)/i.test(raw) || toks[toks.length - 1] === "w" || toks.includes("women");
+  const base = toks.filter((x, i) => x !== "women" && !(x === "w" && i === toks.length - 1)).join(" ");
   const alts = (PAISES[base] || base).split("|").map(v =>
     new Set(v.split(" ").filter(Boolean).map(x => ABREV[x] || x).filter(x => !VACIAS.has(x))));
   return { fem, alts };
@@ -247,7 +249,11 @@ function leerFixture(f) {
   // Resultado a los 90 minutos (sin prórroga ni penaltis) cuando el partido ha terminado
   const gl = fin && ft.home != null && ft.away != null ? ft.home : g.home;
   const gv = fin && ft.home != null && ft.away != null ? ft.away : g.away;
-  return { local: equipoApi(f.teams && f.teams.home && f.teams.home.name), visit: equipoApi(f.teams && f.teams.away && f.teams.away.name), fecha: str(f.fixture && f.fixture.date).slice(0, 10), nl: str(f.teams && f.teams.home && f.teams.home.name), nv: str(f.teams && f.teams.away && f.teams.away.name), fin, vivo, susp, min: st.elapsed, gl, gv };
+  const local = equipoApi(f.teams && f.teams.home && f.teams.home.name);
+  const visit = equipoApi(f.teams && f.teams.away && f.teams.away.name);
+  // Si uno de los dos lleva "W", el partido es femenino (la API a veces solo lo marca en uno)
+  local.fem = visit.fem = local.fem || visit.fem;
+  return { local, visit, fecha: str(f.fixture && f.fixture.date).slice(0, 10), nl: str(f.teams && f.teams.home && f.teams.home.name), nv: str(f.teams && f.teams.away && f.teams.away.name), fin, vivo, susp, min: st.elapsed, gl, gv };
 }
 
 const signoDe = (a, b) => a > b ? "1" : a < b ? "2" : "X";
@@ -284,13 +290,16 @@ export async function actualizarResultados({ forzar = false } = {}) {
   };
   let fechas = [];
   if (forzar) {
-    // Búsqueda manual: toda la jornada (desde el viernes hasta hoy y, salvo el lunes, mañana),
-    // para encontrar partidos de otros días de la misma jornada
-    // El plan gratis de la API solo da ayer, hoy y mañana. Con un plan de pago, FOOTBALL_API_ATRAS=3 amplía a toda la jornada
+    // Búsqueda manual: toda la jornada (desde el viernes hasta hoy y, si el plan lo permite, mañana),
+    // para encontrar partidos de otros días de la misma jornada.
+    // El plan gratis de la API solo llega hasta hoy (y un par de días atrás). Con un plan de pago:
+    //   FOOTBALL_API_ATRAS=3     amplía hacia atrás a toda la jornada
+    //   FOOTBALL_API_ADELANTE=1  mira también el día de mañana
     const maxAtras = Math.max(0, Number(process.env.FOOTBALL_API_ATRAS ?? 1) || 0);
+    const maxAdelante = Math.max(0, Number(process.env.FOOTBALL_API_ADELANTE ?? 0) || 0);
     const atras = { 5: 0, 6: 1, 0: 2, 1: 3 }[dow];
     const desde = atras === undefined ? 0 : -Math.min(atras, maxAtras);
-    const hasta = dow === 1 ? 0 : 1;
+    const hasta = dow === 1 ? 0 : Math.min(1, maxAdelante);
     for (let k = desde; k <= hasta; k++) fechas.push(fechaDe(k));
   } else {
     fechas = [fechaDe(0)];
@@ -329,6 +338,7 @@ export async function actualizarResultados({ forzar = false } = {}) {
   pendientes.forEach(i => {
     const fila = d.partidos[i];
     const ql = equipoQuiniela(fila[1]), qv = equipoQuiniela(fila[2]);
+    ql.fem = qv.fem = ql.fem || qv.fem;   // si uno lleva W/(f), el partido es femenino
     let mejor = null, mejorS = 0;
     lista.forEach(fx => {
       const a = similitud(ql, fx.local), b = similitud(qv, fx.visit);
