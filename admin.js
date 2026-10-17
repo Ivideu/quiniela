@@ -118,7 +118,7 @@
           '<h3>📡 Resultados en directo</h3>' +
           '<p class="qa-hint">Consulta los marcadores y rellena solo los partidos que ya han terminado (resultado a los 90 minutos). Comprueba siempre el resultado oficial.</p>' +
           '<div class="qa-livebox" id="qa-live-estado">Cargando…</div>' +
-          '<label class="qa-chk"><input type="checkbox" id="qa-live-auto" /> Actualizar solo (cada 15 min, de viernes a lunes desde las 12:00)</label>' +
+          '<label class="qa-chk"><input type="checkbox" id="qa-live-auto" /> Actualizar solo (cada 20 min, solo mientras hay partidos en juego)</label>' +
           '<button type="button" id="qa-live-ahora">🔄 Buscar resultados ahora</button>' +
           '<button type="button" class="qa-sec" id="qa-live-notif" style="display:none">🔔 Activar notificaciones del navegador</button>' +
           '<div class="qa-msg" id="qa-live-msg"></div>' +
