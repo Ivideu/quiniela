@@ -316,9 +316,9 @@ export async function actualizarResultados({ forzar = false } = {}) {
     const fecha = fechas[idx];
     
     // Pausa obligatoria de 6.5 segundos entre consultas para respetar el Rate Limit por minuto de API-Sports
-    if (idx > 0) {
-      await sleep(6500);
-    }
+if (idx > 0) {
+  await sleep(1000);
+}
     
     try {
       const r = await llamarApi("/fixtures", { date: fecha, timezone: "Europe/Madrid" });
