@@ -30,6 +30,7 @@ const str = v => (v === null || v === undefined) ? "" : String(v).trim();
 const norm = v => str(v).toUpperCase();
 const norm15 = v => norm(v).replace(/\s/g, "");
 const esPleno = v => /^[0-2M]-[0-2M]$/.test(v);
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function prob(v) {
   if (typeof v === "string") v = v.replace("%", "").replace(",", ".").trim();
@@ -59,8 +60,7 @@ function usuarioEspecial(d) {
   return (c.usuarioEspecial && c.semana === claveSemana()) ? c.usuarioEspecial : especialSemanal(d);
 }
 
-/* ---------- Abrir / cerrar la quiniela: MANUAL desde el panel admin.
-   La fecha (viernes 20:00 Madrid) solo sirve para la cuenta atrás de la pantalla principal. ---------- */
+/* ---------- Abrir / cerrar la quiniela ---------- */
 const CIERRE_DIA = 5, CIERRE_HORA = 20, CIERRE_MIN = 0;   // 0=domingo ... 5=viernes
 
 function partesMadrid(ms) {
@@ -75,7 +75,7 @@ function offsetMadrid(ms) {
   const p = partesMadrid(ms);
   return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - Math.floor(ms / 1000) * 1000;
 }
-function madridAUtc(y, m, d, h, mi) {   // hora de pared de Madrid -> instante UTC (respeta horario de verano)
+function madridAUtc(y, m, d, h, mi) {
   const guess = Date.UTC(y, m - 1, d, h, mi);
   let t = guess - offsetMadrid(guess);
   t = guess - offsetMadrid(t);
@@ -95,11 +95,11 @@ const cerrada = d => {
   const c = d.config || {};
   if (c.abierta === true) return false;
   if (c.abierta === false) return true;
-  const t = Number(c.cierre);            // datos anteriores al modo manual: se respeta lo que hubiera
+  const t = Number(c.cierre);
   return !!t && Date.now() >= t;
 };
 
-/* ---------- Cálculos (antes eran fórmulas del Sheet) ---------- */
+/* ---------- Cálculos ---------- */
 function aciertos(d, fila) {
   let n = 0;
   for (let i = 1; i <= 14; i++) {
@@ -132,13 +132,13 @@ function respuestaGET(d) {
     usuarioEspecial: usuarioEspecial(d),
     datosPartido15: { local: p15[1] || "", visitante: p15[2] || "" },
     abierta: !cerrada(d),
-    cierre: (!cerrada(d) && Number(cfg.cierre)) || null,   // destino de la cuenta atrás (solo con la quiniela abierta)
+    cierre: (!cerrada(d) && Number(cfg.cierre)) || null,
     vozVisible: cfg.vozVisible !== false,
     ahora: Date.now()
   };
 }
 
-/* ---------- Normalización de lo importado ---------- */
+/* ---------- Normalización ---------- */
 function normPartidos(rows) {
   if (!Array.isArray(rows) || rows.length !== 15) throw new Error("Hacen falta exactamente 15 partidos (14 + pleno al 15). Recibidos: " + (Array.isArray(rows) ? rows.length : 0));
   return [HEAD_PARTIDOS, ...rows.map((r, i) => {
@@ -168,14 +168,12 @@ function normGlobal(rows) {
   return [HEAD_GLOBAL, ...rows.filter(r => r && str(r[0])).map(r => [str(r[0]), Math.max(0, Math.floor(Number(r[1]) || 0))])];
 }
 
-/* ---------- Resultados automáticos (API-Football) ----------
-   Usa la variable de entorno FOOTBALL_API_KEY (Netlify). Una sola consulta por día de partidos
-   devuelve todos los encuentros del mundo; aquí se emparejan con los de la quiniela por el nombre. */
+/* ---------- Resultados automáticos (API-Football) ---------- */
 const LIVE_URL = "https://v3.football.api-sports.io";
-const LIVE_MAX_DIA = 90;               // tope propio de consultas al día (el plan gratis permite 100)
-const VENTANA_DIAS = [5, 6, 0, 1];     // viernes, sábado, domingo y lunes (0 = domingo)
-const VENTANA_DESDE = 12;              // desde las 12:00 (hora de Madrid) hasta medianoche
-const PAUSA_SUSPENDIDA_H = 6;          // horas de pausa del modo automático si la API dice que la cuenta está suspendida
+const LIVE_MAX_DIA = 90;
+const VENTANA_DIAS = [5, 6, 0, 1];
+const VENTANA_DESDE = 12;
+const PAUSA_SUSPENDIDA_H = 6;
 
 const esSigno = v => v === "1" || v === "X" || v === "2";
 const nombreCorto = t => str(t).replace(/\s*\(.*$/, "");
@@ -183,7 +181,6 @@ const sinAcentos = t => String(t == null ? "" : t).normalize("NFD").replace(/[\u
 
 const VACIAS = new Set(["cd", "fc", "ud", "sd", "cf", "ca", "ad", "rcd", "rc", "sad", "club", "de", "del", "la", "el", "los", "las", "the"]);
 const ABREV = { at: "atletico", atl: "atletico", ath: "athletic", r: "real", dep: "deportivo", b: "ii", c: "iii" };
-// Selecciones: nombre en español (sin tildes) -> nombre(s) en inglés separados por "|". Añade aquí las que te falten.
 const PAISES = {
   "alemania": "germany", "espana": "spain", "francia": "france", "inglaterra": "england", "italia": "italy",
   "portugal": "portugal", "paises bajos": "netherlands|holland", "belgica": "belgium", "croacia": "croatia",
@@ -199,7 +196,6 @@ const PAISES = {
   "catar": "qatar", "qatar": "qatar", "panama": "panama"
 };
 
-// Equipo tal como viene en la quiniela. Es femenino si lleva "(f)", "W" al final o "Women".
 function equipoQuiniela(txt) {
   const raw = String(txt == null ? "" : txt);
   const toks = sinAcentos(raw.replace(/\(.*?\)/g, " ")).replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean);
@@ -228,14 +224,22 @@ function similitud(q, a) {
   return mejor;
 }
 
+// Control con Retardo para Evitar Suspensión por Ráfaga (Rate Limit)
 async function llamarApi(ruta, params) {
   const key = process.env.FOOTBALL_API_KEY || "";
   if (!key) throw new Error("Falta la variable FOOTBALL_API_KEY en Netlify");
+  
   const res = await fetch(LIVE_URL + ruta + "?" + new URLSearchParams(params), { headers: { "x-apisports-key": key } });
+  
+  if (res.status === 429) {
+    throw new Error("Límite de frecuencia (Rate Limit) alcanzado. Espera un momento.");
+  }
   if (!res.ok) throw new Error("API-Football respondió " + res.status);
+  
   const j = await res.json();
   const errs = j.errors ? (Array.isArray(j.errors) ? j.errors : Object.values(j.errors)) : [];
   if (errs.length) throw new Error("API-Football: " + errs.join(" · "));
+  
   const rest = Number(res.headers.get("x-ratelimit-requests-remaining"));
   return { lista: j.response || [], restantes: isFinite(rest) && res.headers.get("x-ratelimit-requests-remaining") !== null ? rest : null };
 }
@@ -247,12 +251,10 @@ function leerFixture(f) {
   const vivo = ["1H", "HT", "2H", "ET", "BT", "P", "INT", "LIVE", "SUSP"].includes(corto);
   const susp = ["PST", "CANC", "ABD", "AWD", "WO"].includes(corto);
   const g = f.goals || {}, ft = (f.score && f.score.fulltime) || {};
-  // Resultado a los 90 minutos (sin prórroga ni penaltis) cuando el partido ha terminado
   const gl = fin && ft.home != null && ft.away != null ? ft.home : g.home;
   const gv = fin && ft.home != null && ft.away != null ? ft.away : g.away;
   const local = equipoApi(f.teams && f.teams.home && f.teams.home.name);
   const visit = equipoApi(f.teams && f.teams.away && f.teams.away.name);
-  // Si uno de los dos lleva "W", el partido es femenino (la API a veces solo lo marca en uno)
   local.fem = visit.fem = local.fem || visit.fem;
   return { local, visit, fecha: str(f.fixture && f.fixture.date).slice(0, 10), nl: str(f.teams && f.teams.home && f.teams.home.name), nv: str(f.teams && f.teams.away && f.teams.away.name), fin, vivo, susp, min: st.elapsed, gl, gv };
 }
@@ -260,8 +262,6 @@ function leerFixture(f) {
 const signoDe = (a, b) => a > b ? "1" : a < b ? "2" : "X";
 const golPleno = g => g >= 3 ? "M" : String(g);
 
-// Busca los resultados de los partidos pendientes y rellena los que ya han terminado.
-// forzar=true: lo pide el admin (ignora el interruptor automático, el horario y la pausa por suspensión).
 export async function actualizarResultados({ forzar = false } = {}) {
   if (!process.env.FOOTBALL_API_KEY) return { ok: false, mensaje: "Falta la variable FOOTBALL_API_KEY en Netlify" };
   let d = await leer();
@@ -273,7 +273,6 @@ export async function actualizarResultados({ forzar = false } = {}) {
   if (!esPleno(norm15(d.partidos[15][3]))) pendientes.push(15);
   if (!pendientes.length) return { ok: true, mensaje: "Ya están todos los resultados", cambios: [] };
 
-  // Pausa: si la API dijo hace poco que la cuenta está suspendida, el modo automático no vuelve a llamarla
   const prevLive = c0.live || {};
   if (!forzar && prevLive.suspendida && Date.now() - (Number(prevLive.ts) || 0) < PAUSA_SUSPENDIDA_H * 3600 * 1000)
     return { ok: true, omitido: true, mensaje: "API suspendida: en pausa", cambios: [] };
@@ -285,7 +284,7 @@ export async function actualizarResultados({ forzar = false } = {}) {
     if (!VENTANA_DIAS.includes(dow) || +p.hour < VENTANA_DESDE) return { ok: true, omitido: true, mensaje: "Fuera de horario", cambios: [] };
   }
 
-  const dia = new Date().toISOString().slice(0, 10);   // la API cuenta por día UTC
+  const dia = new Date().toISOString().slice(0, 10);
   const uso0 = (c0.apiUso && c0.apiUso.dia === dia) ? (Number(c0.apiUso.n) || 0) : 0;
   if (uso0 >= LIVE_MAX_DIA) return { ok: false, mensaje: "Tope de consultas de hoy alcanzado (" + uso0 + ")", cambios: [] };
 
@@ -294,30 +293,33 @@ export async function actualizarResultados({ forzar = false } = {}) {
     const x = new Date(Date.UTC(+p.year, +p.month - 1, +p.day + desfase));
     return x.getUTCFullYear() + "-" + f2(x.getUTCMonth() + 1) + "-" + f2(x.getUTCDate());
   };
+  
   let fechas = [];
   if (forzar) {
-    // Búsqueda manual: toda la jornada (desde el viernes hasta hoy y, si el plan lo permite, mañana),
-    // para encontrar partidos de otros días de la misma jornada.
-    // El plan gratis de la API solo llega hasta hoy (y un par de días atrás). Con un plan de pago:
-    //   FOOTBALL_API_ATRAS=3     amplía hacia atrás a toda la jornada
-    //   FOOTBALL_API_ADELANTE=1  mira también el día de mañana
+    // Para evitar bloqueos en el plan Free, limitamos la búsqueda manual a HOY y AYER.
     const maxAtras = Math.max(0, Number(process.env.FOOTBALL_API_ATRAS ?? 1) || 0);
-    const maxAdelante = Math.max(0, Number(process.env.FOOTBALL_API_ADELANTE ?? 0) || 0);
     const atras = { 5: 0, 6: 1, 0: 2, 1: 3 }[dow];
     const desde = atras === undefined ? 0 : -Math.min(atras, maxAtras);
-    const hasta = dow === 1 ? 0 : Math.min(1, maxAdelante);
-    for (let k = desde; k <= hasta; k++) fechas.push(fechaDe(k));
+    for (let k = desde; k <= 0; k++) fechas.push(fechaDe(k));
   } else {
     fechas = [fechaDe(0)];
-    if (+p.hour < 9) fechas.push(fechaDe(-1));   // partidos de madrugada: también los de ayer
-    // Partidos pendientes que se sabe que se jugaron ayer (la búsqueda manual guarda el día de cada partido)
+    if (+p.hour < 9) fechas.push(fechaDe(-1));
     if (!fechas.includes(fechaDe(-1)) && pendientes.some(n => (c0.fixFecha || {})[n] === fechaDe(-1))) fechas.push(fechaDe(-1));
   }
+  
   if (uso0 + fechas.length > LIVE_MAX_DIA) return { ok: false, mensaje: "Hoy quedan pocas consultas (" + uso0 + "/" + LIVE_MAX_DIA + "). Inténtalo mañana", cambios: [] };
 
   let fixtures = [], restantes = null, usadas = 0, correctas = 0;
   const errores = [];
-  for (const fecha of fechas) {
+  
+  for (let idx = 0; idx < fechas.length; idx++) {
+    const fecha = fechas[idx];
+    
+    // Pausa obligatoria de 6.5 segundos entre consultas para respetar el Rate Limit por minuto de API-Sports
+    if (idx > 0) {
+      await sleep(6500);
+    }
+    
     try {
       const r = await llamarApi("/fixtures", { date: fecha, timezone: "Europe/Madrid" });
       usadas++; correctas++;
@@ -326,18 +328,18 @@ export async function actualizarResultados({ forzar = false } = {}) {
     } catch (e) {
       usadas++;
       errores.push(e.message);
-      // Una fecha fuera del plan no impide mirar las demás; cualquier otro error corta la búsqueda
       if (!/access to this date/i.test(e.message)) break;
     }
   }
+
   if (!correctas) {
     const msg = errores[0] || "No se pudo consultar la API";
-    const susp = /suspend/i.test(msg);   // true si el error dice que la cuenta está suspendida
+    const susp = /suspend/i.test(msg);
     const dd = await leer();
     const prev = (dd.config || {}).live || {};
     dd.config = {
       ...(dd.config || {}),
-      autoResultados: susp ? false : (dd.config || {}).autoResultados,   // si está suspendida, apaga el modo automático
+      autoResultados: susp ? false : (dd.config || {}).autoResultados,
       apiUso: { dia, n: uso0 + usadas, restantes },
       live: { ...prev, ts: Date.now(), ok: false, error: msg, suspendida: susp }
     };
@@ -350,17 +352,15 @@ export async function actualizarResultados({ forzar = false } = {}) {
   pendientes.forEach(i => {
     const fila = d.partidos[i];
     const ql = equipoQuiniela(fila[1]), qv = equipoQuiniela(fila[2]);
-    ql.fem = qv.fem = ql.fem || qv.fem;   // si uno lleva W/(f), el partido es femenino
+    ql.fem = qv.fem = ql.fem || qv.fem;
     let mejor = null, mejorS = 0;
     lista.forEach(fx => {
       const a = similitud(ql, fx.local), b = similitud(qv, fx.visit);
       if (a >= 0.8 && b >= 0.8 && a + b > mejorS) { mejorS = a + b; mejor = fx; }
     });
     if (!mejor) {
-      // Si se sabe que ese partido es de otro día (visto en una búsqueda manual), no es un error: aún no toca mirarlo
       const fd = (c0.fixFecha || {})[i];
       if (fd && !fechas.includes(fd)) { estado.push({ n: i, est: "prog", fecha: fd }); return; }
-      // Diagnóstico: si la API tiene un partido donde coincide UN equipo, probablemente es solo un nombre distinto
       let cerca = null, cs = 0;
       lista.forEach(fx => {
         const a = similitud(ql, fx.local), b = similitud(qv, fx.visit);
@@ -384,7 +384,6 @@ export async function actualizarResultados({ forzar = false } = {}) {
     }
   });
 
-  // Se vuelve a leer justo antes de guardar y solo se rellena lo que siga vacío (por si el admin lo ha puesto a mano)
   d = await leer();
   const aplicados = [];
   cambios.forEach(ch => {
@@ -397,7 +396,7 @@ export async function actualizarResultados({ forzar = false } = {}) {
   });
   const prev = (d.config || {}).live || {};
   const log = (prev.log || []).concat(aplicados.map(a => ({ ts: Date.now(), n: a.n, texto: a.local + " " + a.marcador + " " + a.visitante + " → " + a.valor }))).slice(-30);
-  // En "live" no se copia "suspendida": una consulta correcta limpia la marca de suspensión
+  
   d.config = { ...(d.config || {}), apiUso: { dia, n: uso0 + usadas, restantes }, fixFecha: { ...((d.config || {}).fixFecha || {}), ...nuevasFechas }, live: { ts: Date.now(), ok: true, estado, log, fechas, errores } };
   await guardar(d);
 
@@ -472,7 +471,7 @@ async function admin(data) {
       return json({ ...r, resultado: r.ok ? "ok" : "error", error: r.ok ? undefined : r.mensaje });
     }
     case "abrirQuiniela": {
-      const cierre = proximoCierre(Date.now());   // la cuenta atrás cuenta hasta el próximo viernes 20:00 (Madrid)
+      const cierre = proximoCierre(Date.now());
       d.config = { ...(d.config || {}), abierta: true, cierre };
       await guardar(d);
       return json({ resultado: "ok", abierta: true, cierre });
@@ -504,7 +503,7 @@ async function admin(data) {
   }
 }
 
-/* ---------- Pronóstico de un jugador (enviar.html) ---------- */
+/* ---------- Pronóstico de un jugador ---------- */
 async function guardarPronostico(data) {
   const d = await leer();
   if (cerrada(d)) return json({ resultado: "cerrado", detalle: "La quiniela está cerrada" });
