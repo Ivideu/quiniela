@@ -171,9 +171,14 @@ function normGlobal(rows) {
 /* ---------- Resultados automáticos (API-Football) ---------- */
 const LIVE_URL = "https://v3.football.api-sports.io";
 const LIVE_MAX_DIA = 90;
-const VENTANA_DIAS = [5, 6, 0, 1];
-const VENTANA_DESDE = 12;
+const VENTANA_DIAS = [5, 6, 0, 1];     // solo se usa si algún partido no tiene hora legible
+const VENTANA_DESDE = 12;              // solo se usa si algún partido no tiene hora legible
 const PAUSA_SUSPENDIDA_H = 6;
+
+// Ventana de consulta de cada partido (modo automático): solo se llama a la API mientras haya algún partido pendiente "en juego".
+const VENTANA_ANTES_MIN = 5;           // empieza 5 min antes de la hora de inicio
+const VENTANA_DESPUES_MIN = 165;       // termina 2 h 45 min después (90' + descanso + añadido + margen)
+const RECUPERACION_HORAS = 8;          // si pasada la ventana sigue sin resultado, se mira 1 vez por hora hasta 8 h después
 
 const esSigno = v => v === "1" || v === "X" || v === "2";
 const nombreCorto = t => str(t).replace(/\s*\(.*$/, "");
@@ -224,22 +229,21 @@ function similitud(q, a) {
   return mejor;
 }
 
-// Control con Retardo para Evitar Suspensión por Ráfaga (Rate Limit)
 async function llamarApi(ruta, params) {
   const key = process.env.FOOTBALL_API_KEY || "";
   if (!key) throw new Error("Falta la variable FOOTBALL_API_KEY en Netlify");
-  
+
   const res = await fetch(LIVE_URL + ruta + "?" + new URLSearchParams(params), { headers: { "x-apisports-key": key } });
-  
+
   if (res.status === 429) {
     throw new Error("Límite de frecuencia (Rate Limit) alcanzado. Espera un momento.");
   }
   if (!res.ok) throw new Error("API-Football respondió " + res.status);
-  
+
   const j = await res.json();
   const errs = j.errors ? (Array.isArray(j.errors) ? j.errors : Object.values(j.errors)) : [];
   if (errs.length) throw new Error("API-Football: " + errs.join(" · "));
-  
+
   const rest = Number(res.headers.get("x-ratelimit-requests-remaining"));
   return { lista: j.response || [], restantes: isFinite(rest) && res.headers.get("x-ratelimit-requests-remaining") !== null ? rest : null };
 }
@@ -262,6 +266,81 @@ function leerFixture(f) {
 const signoDe = (a, b) => a > b ? "1" : a < b ? "2" : "X";
 const golPleno = g => g >= 3 ? "M" : String(g);
 
+/* ---------- Hora de cada partido (columna "Hora") ----------
+   Entiende, entre otros: "16:15", "Sáb 16:15", "sab 16h15", "17/10 16:15", "17/10/2026 16:15",
+   "2026-10-17 16:15" y los números de Excel (0.677 = hora; 46312.677 = fecha + hora).
+   Si no se entiende, devuelve null y ese partido usa el horario general de siempre. */
+const DIAS_SEMANA = { dom: 0, lun: 1, mar: 2, mie: 3, jue: 4, vie: 5, sab: 6 };
+
+function leerHoraPartido(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const crudo = str(v);
+  if (/^\d+([.,]\d+)?$/.test(crudo)) {
+    const n = Number(crudo.replace(",", "."));
+    const frac = n - Math.floor(n);
+    if (!isFinite(n) || frac === 0) return null;
+    const mins = Math.round(frac * 1440) % 1440;
+    let dia = null;
+    if (n >= 1) {
+      const f = new Date(Date.UTC(1899, 11, 30) + Math.floor(n) * 86400000);
+      if (f.getUTCFullYear() >= 2020) dia = { y: f.getUTCFullYear(), m: f.getUTCMonth() + 1, d: f.getUTCDate() };
+    }
+    return { h: Math.floor(mins / 60), mi: mins % 60, dia, dow: null };
+  }
+  const t = sinAcentos(crudo);
+  const hm = t.match(/(\d{1,2})\s*[:h]\s*(\d{2})/);
+  if (!hm) return null;
+  const h = +hm[1], mi = +hm[2];
+  if (h > 23 || mi > 59) return null;
+  const resto = t.replace(hm[0], " ");
+  let dia = null, dow = null;
+  const iso = resto.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) dia = { y: +iso[1], m: +iso[2], d: +iso[3] };
+  else {
+    const dm = resto.match(/(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?/);
+    if (dm && +dm[1] >= 1 && +dm[1] <= 31 && +dm[2] >= 1 && +dm[2] <= 12) {
+      let y = dm[3] ? +dm[3] : null;
+      if (y !== null && y < 100) y += 2000;
+      dia = { y, m: +dm[2], d: +dm[1] };
+    }
+  }
+  const ds = resto.match(/(?:^|[^a-z])(dom|lun|mar|mie|jue|vie|sab)/);
+  if (ds) dow = DIAS_SEMANA[ds[1]];
+  return { h, mi, dia, dow };
+}
+
+// Posibles instantes de inicio (ms UTC) del partido i. null = hora ilegible.
+// Orden de preferencia para el día: fecha escrita en la hora > día guardado por una búsqueda anterior > día de la semana > desconocido (ayer, hoy y mañana).
+function iniciosPartido(i, fila, c0, ahora) {
+  const h = leerHoraPartido(fila && fila[4]);
+  if (!h) return null;
+  const p = partesMadrid(ahora);
+  const hoy = Date.UTC(+p.year, +p.month - 1, +p.day);
+  const aInstante = f => madridAUtc(f.getUTCFullYear(), f.getUTCMonth() + 1, f.getUTCDate(), h.h, h.mi);
+  if (h.dia) return [madridAUtc(h.dia.y != null ? h.dia.y : +p.year, h.dia.m, h.dia.d, h.h, h.mi)];
+  const fd = (c0.fixFecha || {})[i];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fd || "")) {
+    const [y, m, d] = fd.split("-").map(Number);
+    return [madridAUtc(y, m, d, h.h, h.mi)];
+  }
+  if (h.dow !== null) {
+    for (const k of [0, -1, 1, -2, 2, -3, 3]) {
+      const f = new Date(hoy + k * 86400000);
+      if (f.getUTCDay() === h.dow) return [aInstante(f)];
+    }
+  }
+  return [-1, 0, 1].map(k => aInstante(new Date(hoy + k * 86400000)));
+}
+
+function partidoEnVentana(inicios, ahora) {
+  const min = 60000;
+  return inicios.some(t => {
+    if (ahora >= t - VENTANA_ANTES_MIN * min && ahora <= t + VENTANA_DESPUES_MIN * min) return true;
+    // Recuperación: pasada la ventana y sin resultado, se mira una vez por hora (el cron pasa cada 20 min: el de los minutos 0-19)
+    return ahora > t + VENTANA_DESPUES_MIN * min && ahora <= t + RECUPERACION_HORAS * 60 * min && new Date(ahora).getUTCMinutes() < 20;
+  });
+}
+
 export async function actualizarResultados({ forzar = false } = {}) {
   if (!process.env.FOOTBALL_API_KEY) return { ok: false, mensaje: "Falta la variable FOOTBALL_API_KEY en Netlify" };
   let d = await leer();
@@ -281,7 +360,18 @@ export async function actualizarResultados({ forzar = false } = {}) {
   const dow = new Date(Date.UTC(+p.year, +p.month - 1, +p.day)).getUTCDay();
   if (!forzar) {
     if (c0.autoResultados !== true) return { ok: true, omitido: true, mensaje: "Automático desactivado", cambios: [] };
-    if (!VENTANA_DIAS.includes(dow) || +p.hour < VENTANA_DESDE) return { ok: true, omitido: true, mensaje: "Fuera de horario", cambios: [] };
+
+    // Solo se consulta la API si algún partido pendiente está dentro de su ventana de juego.
+    // Los partidos cuya hora no se entiende usan el horario general (viernes a lunes desde las 12:00).
+    const ahora = Date.now();
+    const horarioGeneral = VENTANA_DIAS.includes(dow) && +p.hour >= VENTANA_DESDE;
+    let enVentana = false;
+    pendientes.forEach(i => {
+      const ini = iniciosPartido(i, d.partidos[i], c0, ahora);
+      if (!ini) { if (horarioGeneral) enVentana = true; return; }
+      if (partidoEnVentana(ini, ahora)) enVentana = true;
+    });
+    if (!enVentana) return { ok: true, omitido: true, mensaje: "Ningún partido pendiente está en juego", cambios: [] };
   }
 
   const dia = new Date().toISOString().slice(0, 10);
@@ -293,7 +383,7 @@ export async function actualizarResultados({ forzar = false } = {}) {
     const x = new Date(Date.UTC(+p.year, +p.month - 1, +p.day + desfase));
     return x.getUTCFullYear() + "-" + f2(x.getUTCMonth() + 1) + "-" + f2(x.getUTCDate());
   };
-  
+
   let fechas = [];
   if (forzar) {
     // Para evitar bloqueos en el plan Free, limitamos la búsqueda manual a HOY y AYER.
@@ -306,20 +396,20 @@ export async function actualizarResultados({ forzar = false } = {}) {
     if (+p.hour < 9) fechas.push(fechaDe(-1));
     if (!fechas.includes(fechaDe(-1)) && pendientes.some(n => (c0.fixFecha || {})[n] === fechaDe(-1))) fechas.push(fechaDe(-1));
   }
-  
+
   if (uso0 + fechas.length > LIVE_MAX_DIA) return { ok: false, mensaje: "Hoy quedan pocas consultas (" + uso0 + "/" + LIVE_MAX_DIA + "). Inténtalo mañana", cambios: [] };
 
   let fixtures = [], restantes = null, usadas = 0, correctas = 0;
   const errores = [];
-  
+
   for (let idx = 0; idx < fechas.length; idx++) {
     const fecha = fechas[idx];
-    
-    // Pausa obligatoria de 6.5 segundos entre consultas para respetar el Rate Limit por minuto de API-Sports
-if (idx > 0) {
-  await sleep(1000);
-}
-    
+
+    // Pausa corta entre consultas (con 1 s sobra para el límite por minuto y no agota el tiempo de la función de Netlify)
+    if (idx > 0) {
+      await sleep(1000);
+    }
+
     try {
       const r = await llamarApi("/fixtures", { date: fecha, timezone: "Europe/Madrid" });
       usadas++; correctas++;
@@ -396,7 +486,7 @@ if (idx > 0) {
   });
   const prev = (d.config || {}).live || {};
   const log = (prev.log || []).concat(aplicados.map(a => ({ ts: Date.now(), n: a.n, texto: a.local + " " + a.marcador + " " + a.visitante + " → " + a.valor }))).slice(-30);
-  
+
   d.config = { ...(d.config || {}), apiUso: { dia, n: uso0 + usadas, restantes }, fixFecha: { ...((d.config || {}).fixFecha || {}), ...nuevasFechas }, live: { ts: Date.now(), ok: true, estado, log, fechas, errores } };
   await guardar(d);
 
