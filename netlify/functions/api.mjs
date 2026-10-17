@@ -175,6 +175,7 @@ const LIVE_URL = "https://v3.football.api-sports.io";
 const LIVE_MAX_DIA = 90;               // tope propio de consultas al día (el plan gratis permite 100)
 const VENTANA_DIAS = [5, 6, 0, 1];     // viernes, sábado, domingo y lunes (0 = domingo)
 const VENTANA_DESDE = 12;              // desde las 12:00 (hora de Madrid) hasta medianoche
+const PAUSA_SUSPENDIDA_H = 6;          // horas de pausa del modo automático si la API dice que la cuenta está suspendida
 
 const esSigno = v => v === "1" || v === "X" || v === "2";
 const nombreCorto = t => str(t).replace(/\s*\(.*$/, "");
@@ -260,7 +261,7 @@ const signoDe = (a, b) => a > b ? "1" : a < b ? "2" : "X";
 const golPleno = g => g >= 3 ? "M" : String(g);
 
 // Busca los resultados de los partidos pendientes y rellena los que ya han terminado.
-// forzar=true: lo pide el admin (ignora el interruptor automático y el horario).
+// forzar=true: lo pide el admin (ignora el interruptor automático, el horario y la pausa por suspensión).
 export async function actualizarResultados({ forzar = false } = {}) {
   if (!process.env.FOOTBALL_API_KEY) return { ok: false, mensaje: "Falta la variable FOOTBALL_API_KEY en Netlify" };
   let d = await leer();
@@ -271,6 +272,11 @@ export async function actualizarResultados({ forzar = false } = {}) {
   for (let i = 1; i <= 14; i++) if (!esSigno(norm(d.partidos[i][3]))) pendientes.push(i);
   if (!esPleno(norm15(d.partidos[15][3]))) pendientes.push(15);
   if (!pendientes.length) return { ok: true, mensaje: "Ya están todos los resultados", cambios: [] };
+
+  // Pausa: si la API dijo hace poco que la cuenta está suspendida, el modo automático no vuelve a llamarla
+  const prevLive = c0.live || {};
+  if (!forzar && prevLive.suspendida && Date.now() - (Number(prevLive.ts) || 0) < PAUSA_SUSPENDIDA_H * 3600 * 1000)
+    return { ok: true, omitido: true, mensaje: "API suspendida: en pausa", cambios: [] };
 
   const p = partesMadrid(Date.now());
   const dow = new Date(Date.UTC(+p.year, +p.month - 1, +p.day)).getUTCDay();
@@ -326,9 +332,15 @@ export async function actualizarResultados({ forzar = false } = {}) {
   }
   if (!correctas) {
     const msg = errores[0] || "No se pudo consultar la API";
+    const susp = /suspend/i.test(msg);   // true si el error dice que la cuenta está suspendida
     const dd = await leer();
     const prev = (dd.config || {}).live || {};
-    dd.config = { ...(dd.config || {}), apiUso: { dia, n: uso0 + usadas, restantes }, live: { ...prev, ts: Date.now(), ok: false, error: msg } };
+    dd.config = {
+      ...(dd.config || {}),
+      autoResultados: susp ? false : (dd.config || {}).autoResultados,   // si está suspendida, apaga el modo automático
+      apiUso: { dia, n: uso0 + usadas, restantes },
+      live: { ...prev, ts: Date.now(), ok: false, error: msg, suspendida: susp }
+    };
     await guardar(dd);
     return { ok: false, mensaje: msg, cambios: [] };
   }
@@ -385,6 +397,7 @@ export async function actualizarResultados({ forzar = false } = {}) {
   });
   const prev = (d.config || {}).live || {};
   const log = (prev.log || []).concat(aplicados.map(a => ({ ts: Date.now(), n: a.n, texto: a.local + " " + a.marcador + " " + a.visitante + " → " + a.valor }))).slice(-30);
+  // En "live" no se copia "suspendida": una consulta correcta limpia la marca de suspensión
   d.config = { ...(d.config || {}), apiUso: { dia, n: uso0 + usadas, restantes }, fixFecha: { ...((d.config || {}).fixFecha || {}), ...nuevasFechas }, live: { ts: Date.now(), ok: true, estado, log, fechas, errores } };
   await guardar(d);
 
