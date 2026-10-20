@@ -162,6 +162,12 @@
     .prize { text-align: right; font-weight: 800; font-size: 18px; color: var(--ok); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .prize.zero { color: var(--muted); font-weight: 600; font-size: 14px; }
 
+    /* Jornada / histórico */
+    .chip { display: inline-block; margin-top: 6px; padding: 3px 12px; border-radius: 999px; background: rgba(58,34,0,.16); color: #3a2200; font-size: 12px; font-weight: 800; letter-spacing: .3px; }
+    .hist h2 { margin: 28px 4px 0; font-size: 14px; text-transform: uppercase; letter-spacing: .9px; color: var(--primary); }
+    .hist .list { margin-top: 12px; }
+    .cat em.ult { background: rgba(0,119,204,.12); color: var(--primary); padding: 2px 8px; border-radius: 999px; }
+
     /* Esqueleto de carga */
     .skeleton { height: 82px; border-radius: 14px; background: linear-gradient(90deg, var(--card) 25%, var(--line) 50%, var(--card) 75%); background-size: 200% 100%; animation: sk 1.3s linear infinite; box-shadow: var(--shadow); }
     @keyframes sk { to { background-position: -200% 0; } }
@@ -215,9 +221,14 @@
       <p id="subtitulo">Cargando el reparto…</p>
       <div class="summary">
         <div class="highlight">
-          <span class="trophy" aria-hidden="true">🏆</span>
-          <strong id="totalGanado">–</strong>
-          <small id="totalGanadoLabel">Ganancias totales</small>
+          <span class="trophy" aria-hidden="true">🎯</span>
+          <strong id="jornadaImporte">–</strong>
+          <small id="jornadaLabel">Cobrado en la jornada</small>
+          <span class="chip" id="jornadaAciertos" style="display:none"></span>
+        </div>
+        <div id="totalBox" style="display:none">
+          <strong id="totalTemporada">–</strong>
+          <small id="totalLabel">Acumulado de la temporada</small>
         </div>
       </div>
     </header>
@@ -227,6 +238,11 @@
       <div class="skeleton"></div>
       <div class="skeleton"></div>
     </main>
+
+    <section class="hist" id="hist" style="display:none">
+      <h2>📒 Histórico de jornadas</h2>
+      <div class="list" id="histLista"></div>
+    </section>
 
     <a class="back-link" href="index.html"><span class="arrow">←</span> Volver a inicio</a>
   </div>
@@ -264,6 +280,64 @@
       requestAnimationFrame(paso);
     }
 
+    /* Cabecera: lo cobrado en la última jornada + acumulado de la temporada */
+    function pintarResumen(hist, totalActual) {
+      var ult = hist.length ? hist[hist.length - 1] : null;
+      var imp = ult ? ult.importe : totalActual;
+      var impEl = document.getElementById("jornadaImporte");
+      if (imp > 0) contar(impEl, imp, function (v) { return fmt(v) + " €"; }); else impEl.textContent = "0,00 €";
+      document.getElementById("jornadaLabel").textContent = "Cobrado en " + (ult && ult.j ? ult.j : "la jornada");
+      var chip = document.getElementById("jornadaAciertos");
+      chip.style.display = ult ? "inline-block" : "none";
+      if (ult) chip.textContent = ult.aciertos + (ult.aciertos === 1 ? " acierto" : " aciertos");
+
+      var box = document.getElementById("totalBox");
+      if (hist.length) {
+        var total = hist.reduce(function (s, h) { return s + h.importe; }, 0);
+        box.style.display = "";
+        contar(document.getElementById("totalTemporada"), total, function (v) { return fmt(v) + " €"; });
+        document.getElementById("totalLabel").textContent = "Acumulado de la temporada · " + hist.length + (hist.length === 1 ? " jornada" : " jornadas");
+      } else {
+        box.style.display = "none";
+      }
+    }
+
+    /* Una tarjeta por jornada: aciertos + importe */
+    function pintarHistorial(hist) {
+      var sec = document.getElementById("hist"), cont = document.getElementById("histLista");
+      cont.innerHTML = "";
+      if (!hist.length) { sec.style.display = "none"; return; }
+      sec.style.display = "";
+      var max = Math.max.apply(null, hist.map(function (h) { return h.importe; })) || 1;
+      hist.slice().reverse().forEach(function (h, i) {
+        var esUlt = i === 0, esTop = h.importe === max && h.importe > 0;
+        var row = document.createElement("div");
+        row.className = "row" + (esTop ? " top" : "");
+        row.style.animationDelay = (i * 0.06) + "s";
+
+        var badge = document.createElement("div"); badge.className = "badge";
+        var bi = document.createElement("div"); bi.textContent = h.aciertos;
+        var sm = document.createElement("small"); sm.textContent = h.aciertos === 1 ? "acierto" : "aciertos";
+        bi.appendChild(sm); badge.appendChild(bi);
+
+        var info = document.createElement("div"); info.className = "info";
+        var cat = document.createElement("span"); cat.className = "cat"; cat.textContent = h.j;
+        if (esUlt) { var em = document.createElement("em"); em.className = "ult"; em.textContent = "Última"; cat.appendChild(em); }
+        else if (esTop) { var em2 = document.createElement("em"); em2.textContent = "🏆 Mejor jornada"; cat.appendChild(em2); }
+        var bar = document.createElement("div"); bar.className = "bar";
+        var fill = document.createElement("i"); bar.appendChild(fill);
+        info.appendChild(cat); info.appendChild(bar);
+
+        var prize = document.createElement("div"); prize.className = "prize" + (h.importe === 0 ? " zero" : "");
+        prize.textContent = h.importe === 0 ? "—" : "";
+
+        row.appendChild(badge); row.appendChild(info); row.appendChild(prize);
+        cont.appendChild(row);
+        if (h.importe > 0) setTimeout(function () { contar(prize, h.importe, function (v) { return fmt(v) + " €"; }); }, i * 60 + 150);
+        setTimeout(function () { fill.style.width = Math.max((h.importe / max) * 100, h.importe > 0 ? 6 : 0) + "%"; }, i * 60 + 250);
+      });
+    }
+
     function mostrarError() {
       document.getElementById("lista").innerHTML =
         '<div class="msg">No se ha podido cargar el escrutinio 😕<br>' +
@@ -280,7 +354,9 @@
       try {
         const res = await fetch(API_URL);
         if (!res.ok) throw new Error("HTTP " + res.status);
-        const { escrutinio } = await res.json(); // el JSON debe tener esta propiedad
+        const datos = await res.json();
+        const escrutinio = datos.escrutinio; // el JSON debe tener esta propiedad
+        const historial = Array.isArray(datos.historial) ? datos.historial : [];
 
         // Ignoramos encabezados y procesamos solo datos
         const filas = escrutinio.slice(1).map(function (f) {
@@ -290,17 +366,16 @@
         if (!filas.length) {
           lista.innerHTML = '<div class="msg">Todavía no hay escrutinio disponible ⏳</div>';
           document.getElementById("subtitulo").textContent = "Vuelve en cuanto se publique";
-          document.getElementById("totalGanado").textContent = "–";
-          document.getElementById("totalGanadoLabel").textContent = "Ganancias totales";
+          pintarResumen(historial, 0);
+          pintarHistorial(historial);
           return;
         }
 
         lista.innerHTML = "";
         const maxPremio = Math.max.apply(null, filas.map(function (f) { return f.premio; })) || 1;
 
-        // Suma de los premios de todos los resultados
+        // Suma de los premios de todos los resultados (jornada actual)
         const totalGanado = filas.reduce(function (suma, f) { return suma + f.premio; }, 0);
-        const premiosConDinero = filas.filter(function (f) { return f.premio > 0; }).length;
 
         // Secuencia predefinida para los aciertos de la Quiniela (15, 14, 13, 12, 11, 10)
         const aciertosOrdenados = [15, 14, 13, 12, 11, 10];
@@ -342,15 +417,8 @@
 
         document.getElementById("subtitulo").textContent = filas.length + " categorías de premio";
 
-        // Cabecera: suma total de las ganancias
-        if (totalGanado > 0) {
-          contar(document.getElementById("totalGanado"), totalGanado, function (v) { return fmt(v) + " €"; });
-          document.getElementById("totalGanadoLabel").textContent =
-            "Ganancias totales · " + premiosConDinero + (premiosConDinero === 1 ? " premio" : " premios");
-        } else {
-          document.getElementById("totalGanado").textContent = "0,00 €";
-          document.getElementById("totalGanadoLabel").textContent = "Sin premios todavía";
-        }
+        pintarResumen(historial, totalGanado);
+        pintarHistorial(historial);
       } catch (error) {
         console.error("Error cargando el escrutinio:", error);
         mostrarError();

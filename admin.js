@@ -6,7 +6,7 @@
      · rotar al azar el usuario especial ⭐
      · poner los resultados de la jornada (a mano o buscándolos en API-Football, con aviso al terminar un partido)
      · importar la jornada desde Excel
-     · victorias totales y premios del escrutinio
+     · victorias totales, histórico de jornadas (aciertos + importe) y premios del escrutinio
    Uso: <script src="admin.js"></script> al final del <body>.
    ===================================================================== */
 (function () {
@@ -84,7 +84,13 @@
     ".qa-gl{display:grid;grid-template-columns:1fr auto 64px auto;gap:6px;align-items:center;margin-bottom:6px;font-size:14px}",
     "#qa-box button.qa-mas{width:38px;height:38px;margin:0;padding:0;font-size:20px;line-height:1}",
     "#qa-box .qa-gl input[type=text]{text-align:center;padding:8px 4px}",
-    ".qa-prem{display:grid;grid-template-columns:1fr 110px;gap:6px 10px;align-items:center;font-size:14px}"
+    ".qa-prem{display:grid;grid-template-columns:1fr 110px;gap:6px 10px;align-items:center;font-size:14px}",
+    /* Histórico de jornadas */
+    ".qa-hj{display:grid;grid-template-columns:1fr 56px 84px 38px;gap:6px;align-items:center;margin-bottom:6px}",
+    "#qa-box .qa-hj input[type=text]{padding:8px 4px;text-align:center}",
+    "#qa-box .qa-hj input.qa-hj-j{text-align:left;padding-left:8px}",
+    ".qa-hj-cab{font-size:11px;color:#6b7785;text-transform:uppercase;letter-spacing:.5px;text-align:center}",
+    ".qa-histtot{margin-top:8px;text-align:center;font-weight:bold;color:#003366;background:#f8fbff;border:2px solid #b3d7ff;border-radius:10px;padding:10px}"
   ].join("\n");
   var styleEl = document.createElement("style");
   styleEl.textContent = css;
@@ -154,6 +160,13 @@
           '<div id="qa-glob"></div>' +
           '<button type="button" id="qa-glob-go">Guardar victorias</button>' +
           '<div class="qa-msg" id="qa-glob-msg"></div>' +
+          '<h3>📒 Histórico de jornadas</h3>' +
+          '<p class="qa-hint">Aciertos y lo cobrado en cada jornada. El total acumulado se calcula solo.</p>' +
+          '<div id="qa-hist"></div>' +
+          '<div class="qa-histtot" id="qa-hist-tot"></div>' +
+          '<button type="button" class="qa-sec" id="qa-hist-add">➕ Añadir jornada (con los datos de la actual)</button>' +
+          '<button type="button" id="qa-hist-go">Guardar histórico</button>' +
+          '<div class="qa-msg" id="qa-hist-msg"></div>' +
           '<h3>💶 Premios del escrutinio (€)</h3>' +
           '<div class="qa-prem" id="qa-premios"></div>' +
           '<button type="button" id="qa-premios-go">Guardar premios</button>' +
@@ -259,7 +272,7 @@
       pintarEstado();
       pintarEspecial();
       pintarPartidos();
-      pintarPremios(); pintarGlobal();
+      pintarPremios(); pintarGlobal(); pintarHistorial();
       $("qa-voz-vis").checked = DATA.vozVisible !== false;
       $("qa-contenido").style.display = "block";
       iniciarLive();
@@ -775,7 +788,7 @@
       var r = await post({ action: "importar", partidos: IMP.partidos, pronosticos: IMP.pronosticos, global: IMP.global, vaciar: $("qa-imp-vaciar").checked });
       if (r.resultado === "ok") {
         DATA = await leerDatos();
-        pintarEstado(); pintarEspecial(); pintarPartidos(); pintarPremios(); pintarGlobal();
+        pintarEstado(); pintarEspecial(); pintarPartidos(); pintarPremios(); pintarGlobal(); pintarHistorial();
         VISTOS = fotoResultados(DATA); cargarLive();
         $("qa-imp-file").value = ""; $("qa-imp-text").value = "";
         setMsg("qa-imp-msg", "✅ Importado: " + r.partidos + " partidos y " + r.jugadores + " jugadores. Recuerda pulsar «Abrir quiniela» cuando quieras que se pueda jugar.", "ok");
@@ -839,6 +852,69 @@
       if (r.resultado === "ok") { DATA.global = filas; setMsg("qa-glob-msg", "✅ Victorias guardadas", "ok"); }
       else setMsg("qa-glob-msg", r.error || "Error", "err");
     } catch (e) { setMsg("qa-glob-msg", "Error de conexión", "err"); }
+    btn.disabled = false;
+  };
+
+  /* ---------- Histórico de jornadas (aciertos + importe cobrado) ---------- */
+  function aNum(v) { return Number(String(v).replace(",", ".")) || 0; }
+  function fmtEur(n) { return n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €"; }
+
+  function mejorAciertos() {
+    var m = 0;
+    ((DATA && DATA.clasificacion) || []).slice(1).forEach(function (f) { m = Math.max(m, Number(f[1]) || 0); });
+    return m;
+  }
+  function premiosActuales() {
+    var s = 0, e = (DATA && DATA.escrutinio) || [];
+    for (var i = 1; i < e.length; i++) s += Number(e[i][2]) || 0;
+    return s;
+  }
+  function totalHistorial() {
+    var t = 0, n = 0;
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-hist .qa-hj[data-fila]"), function (f) {
+      t += aNum(f.querySelector(".qa-hj-i").value); n++;
+    });
+    $("qa-hist-tot").textContent = "Total acumulado: " + fmtEur(t) + " · " + n + (n === 1 ? " jornada" : " jornadas");
+  }
+  function filaHistorial(h) {
+    var f = document.createElement("div");
+    f.className = "qa-hj"; f.setAttribute("data-fila", "1");
+    var j = document.createElement("input"); j.type = "text"; j.className = "qa-hj-j"; j.value = h.j || ""; j.placeholder = "Jornada";
+    var a = document.createElement("input"); a.type = "text"; a.className = "qa-hj-a"; a.setAttribute("inputmode", "numeric"); a.value = h.aciertos;
+    var i = document.createElement("input"); i.type = "text"; i.className = "qa-hj-i"; i.setAttribute("inputmode", "decimal"); i.value = String(h.importe).replace(".", ",");
+    i.oninput = totalHistorial;
+    var x = document.createElement("button"); x.type = "button"; x.className = "qa-mas qa-rojo"; x.textContent = "✕";
+    x.onclick = function () { f.remove(); totalHistorial(); };
+    f.appendChild(j); f.appendChild(a); f.appendChild(i); f.appendChild(x);
+    return f;
+  }
+  function pintarHistorial() {
+    var cont = $("qa-hist");
+    cont.innerHTML = "";
+    var cab = document.createElement("div"); cab.className = "qa-hj";
+    ["Jornada", "Aciert.", "Cobrado €", ""].forEach(function (t) { var d = document.createElement("div"); d.className = "qa-hj-cab"; d.textContent = t; cab.appendChild(d); });
+    cont.appendChild(cab);
+    ((DATA && DATA.historial) || []).forEach(function (h) { cont.appendChild(filaHistorial(h)); });
+    totalHistorial();
+  }
+  $("qa-hist-add").onclick = function () {
+    var n = document.querySelectorAll("#qa-hist .qa-hj[data-fila]").length + 1;
+    $("qa-hist").appendChild(filaHistorial({ j: "Jornada " + n, aciertos: mejorAciertos(), importe: Math.round(premiosActuales() * 100) / 100 }));
+    totalHistorial();
+  };
+  $("qa-hist-go").onclick = async function () {
+    var filas = [];
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-hist .qa-hj[data-fila]"), function (f) {
+      filas.push({ j: f.querySelector(".qa-hj-j").value, aciertos: parseInt(f.querySelector(".qa-hj-a").value, 10) || 0, importe: aNum(f.querySelector(".qa-hj-i").value) });
+    });
+    var btn = $("qa-hist-go");
+    btn.disabled = true;
+    setMsg("qa-hist-msg", "Guardando...");
+    try {
+      var r = await post({ action: "guardarHistorial", historial: filas });
+      if (r.resultado === "ok") { DATA.historial = filas; setMsg("qa-hist-msg", "✅ Histórico guardado", "ok"); }
+      else setMsg("qa-hist-msg", r.error || "Error", "err");
+    } catch (e) { setMsg("qa-hist-msg", "Error de conexión", "err"); }
     btn.disabled = false;
   };
 })();

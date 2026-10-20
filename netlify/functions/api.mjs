@@ -18,7 +18,7 @@ const json = (obj, status = 200) =>
 
 /* ---------- Almacén ---------- */
 const store = () => getStore({ name: "quiniela", consistency: "strong" });
-const vacio = () => ({ partidos: [HEAD_PARTIDOS], pronosticos: [HEAD_PRON], global: [HEAD_GLOBAL], premios: [0, 0, 0, 0, 0, 0], config: {} });
+const vacio = () => ({ partidos: [HEAD_PARTIDOS], pronosticos: [HEAD_PRON], global: [HEAD_GLOBAL], premios: [0, 0, 0, 0, 0, 0], historial: [], config: {} });
 async function leer() {
   const d = await store().get("datos", { type: "json" });
   return Object.assign(vacio(), d || {});
@@ -128,6 +128,7 @@ function respuestaGET(d) {
     pronosticos: d.pronosticos.map(f => f.map(c => str(c))),
     clasificacion: clasificacion(d),
     escrutinio: escrutinio(d),
+    historial: d.historial || [],
     global: d.global, Global: d.global,
     usuarioEspecial: usuarioEspecial(d),
     datosPartido15: { local: p15[1] || "", visitante: p15[2] || "" },
@@ -166,6 +167,14 @@ function normPronosticos(rows) {
 function normGlobal(rows) {
   if (!Array.isArray(rows) || rows.length > 500) throw new Error("Datos globales no válidos");
   return [HEAD_GLOBAL, ...rows.filter(r => r && str(r[0])).map(r => [str(r[0]), Math.max(0, Math.floor(Number(r[1]) || 0))])];
+}
+function normHistorial(rows) {
+  if (!Array.isArray(rows) || rows.length > 200) throw new Error("Histórico no válido");
+  return rows.filter(r => r && typeof r === "object").map((r, i) => ({
+    j: str(r.j) || "Jornada " + (i + 1),
+    aciertos: Math.min(15, Math.max(0, Math.floor(Number(r.aciertos) || 0))),
+    importe: Math.round(Math.max(0, Number(String(r.importe).replace(",", ".")) || 0) * 100) / 100
+  }));
 }
 
 /* ---------- Resultados automáticos (API-Football) ---------- */
@@ -585,6 +594,11 @@ async function admin(data) {
       const p = Array.isArray(data.premios) ? data.premios.slice(0, 6).map(v => Math.max(0, Number(String(v).replace(",", ".")) || 0)) : [];
       while (p.length < 6) p.push(0);
       d.premios = p;
+      await guardar(d);
+      return json({ resultado: "ok" });
+    }
+    case "guardarHistorial": {
+      try { d.historial = normHistorial(data.historial); } catch (e) { return json({ resultado: "error", error: e.message }); }
       await guardar(d);
       return json({ resultado: "ok" });
     }
