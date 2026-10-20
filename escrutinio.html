@@ -168,6 +168,19 @@
     .hist .list { margin-top: 12px; }
     .cat em.ult { background: rgba(0,119,204,.12); color: var(--primary); padding: 2px 8px; border-radius: 999px; }
 
+    details.temp { margin-top: 14px; background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 0 14px; }
+    details.temp > summary { cursor: pointer; list-style: none; padding: 14px 2px; display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--primary); }
+    details.temp > summary::-webkit-details-marker { display: none; }
+    details.temp > summary::after { content: "▾"; transition: transform .2s; }
+    details.temp[open] > summary::after { transform: rotate(180deg); }
+    .temp-tot { margin-left: auto; font-size: 13px; color: var(--muted); font-weight: 600; }
+    details.temp .list { margin: 0 0 14px; }
+    .temp-vacia { padding: 4px 2px 16px; color: var(--muted); font-size: 14px; }
+    .total-final { margin-top: 22px; text-align: center; padding: 18px 12px; border-radius: 14px; color: #fff; background: linear-gradient(135deg, #0077cc, #1f5fbf); box-shadow: var(--shadow); }
+    .total-final small { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .7px; opacity: .9; }
+    .total-final strong { display: block; font-size: 30px; margin: 4px 0; font-variant-numeric: tabular-nums; }
+    .total-final span { font-size: 13px; opacity: .9; }
+
     /* Esqueleto de carga */
     .skeleton { height: 82px; border-radius: 14px; background: linear-gradient(90deg, var(--card) 25%, var(--line) 50%, var(--card) 75%); background-size: 200% 100%; animation: sk 1.3s linear infinite; box-shadow: var(--shadow); }
     @keyframes sk { to { background-position: -200% 0; } }
@@ -226,10 +239,6 @@
           <small id="jornadaLabel">Cobrado en la jornada</small>
           <span class="chip" id="jornadaAciertos" style="display:none"></span>
         </div>
-        <div id="totalBox" style="display:none">
-          <strong id="totalTemporada">–</strong>
-          <small id="totalLabel">Acumulado de la temporada</small>
-        </div>
       </div>
     </header>
 
@@ -240,9 +249,14 @@
     </main>
 
     <section class="hist" id="hist" style="display:none">
-      <h2>📒 Histórico de jornadas</h2>
-      <div class="list" id="histLista"></div>
+      <h2>📒 Histórico por temporadas</h2>
+      <div id="temporadas"></div>
     </section>
+    <div class="total-final" id="totalFinal" style="display:none">
+      <small>Total acumulado · todas las temporadas</small>
+      <strong id="totalAcumulado">–</strong>
+      <span id="totalDetalle"></span>
+    </div>
 
     <a class="back-link" href="index.html"><span class="arrow">←</span> Volver a inicio</a>
   </div>
@@ -280,9 +294,10 @@
       requestAnimationFrame(paso);
     }
 
-    /* Cabecera: lo cobrado en la última jornada + acumulado de la temporada */
-    function pintarResumen(hist, totalActual) {
-      var ult = hist.length ? hist[hist.length - 1] : null;
+    var TEMP_DEFECTO = ["2025-2026", "2026-2027"], TEMP_ACTIVA = "2026-2027";
+
+    /* Recuadro amarillo: solo la jornada actual (la última de la temporada activa) */
+    function pintarResumen(ult, totalActual) {
       var imp = ult ? ult.importe : totalActual;
       var impEl = document.getElementById("jornadaImporte");
       if (imp > 0) contar(impEl, imp, function (v) { return fmt(v) + " €"; }); else impEl.textContent = "0,00 €";
@@ -290,52 +305,77 @@
       var chip = document.getElementById("jornadaAciertos");
       chip.style.display = ult ? "inline-block" : "none";
       if (ult) chip.textContent = ult.aciertos + (ult.aciertos === 1 ? " acierto" : " aciertos");
-
-      var box = document.getElementById("totalBox");
-      if (hist.length) {
-        var total = hist.reduce(function (s, h) { return s + h.importe; }, 0);
-        box.style.display = "";
-        contar(document.getElementById("totalTemporada"), total, function (v) { return fmt(v) + " €"; });
-        document.getElementById("totalLabel").textContent = "Acumulado de la temporada · " + hist.length + (hist.length === 1 ? " jornada" : " jornadas");
-      } else {
-        box.style.display = "none";
-      }
     }
 
-    /* Una tarjeta por jornada: aciertos + importe */
-    function pintarHistorial(hist) {
-      var sec = document.getElementById("hist"), cont = document.getElementById("histLista");
+    function tarjetaJornada(h, max, i, esUlt, esTop) {
+      var row = document.createElement("div");
+      row.className = "row" + (esTop ? " top" : "");
+      row.style.animationDelay = (i * 0.06) + "s";
+      var badge = document.createElement("div"); badge.className = "badge";
+      var bi = document.createElement("div"); bi.textContent = h.aciertos;
+      var sm = document.createElement("small"); sm.textContent = h.aciertos === 1 ? "acierto" : "aciertos";
+      bi.appendChild(sm); badge.appendChild(bi);
+      var info = document.createElement("div"); info.className = "info";
+      var cat = document.createElement("span"); cat.className = "cat"; cat.textContent = h.j;
+      if (esTop) { var em = document.createElement("em"); em.textContent = "🏆 Mejor jornada"; cat.appendChild(em); }
+      var bar = document.createElement("div"); bar.className = "bar";
+      var fill = document.createElement("i"); bar.appendChild(fill);
+      info.appendChild(cat); info.appendChild(bar);
+      var prize = document.createElement("div"); prize.className = "prize" + (h.importe === 0 ? " zero" : "");
+      prize.textContent = h.importe === 0 ? "—" : fmt(h.importe) + " €";
+      row.appendChild(badge); row.appendChild(info); row.appendChild(prize);
+      setTimeout(function () { fill.style.width = Math.max((h.importe / max) * 100, h.importe > 0 ? 6 : 0) + "%"; }, i * 60 + 250);
+      return row;
+    }
+
+    function pintarTemporadas(historial, temporadas, activa) {
+      var sec = document.getElementById("hist"), cont = document.getElementById("temporadas");
       cont.innerHTML = "";
-      if (!hist.length) { sec.style.display = "none"; return; }
       sec.style.display = "";
-      var max = Math.max.apply(null, hist.map(function (h) { return h.importe; })) || 1;
-      hist.slice().reverse().forEach(function (h, i) {
-        var esUlt = i === 0, esTop = h.importe === max && h.importe > 0;
-        var row = document.createElement("div");
-        row.className = "row" + (esTop ? " top" : "");
-        row.style.animationDelay = (i * 0.06) + "s";
-
-        var badge = document.createElement("div"); badge.className = "badge";
-        var bi = document.createElement("div"); bi.textContent = h.aciertos;
-        var sm = document.createElement("small"); sm.textContent = h.aciertos === 1 ? "acierto" : "aciertos";
-        bi.appendChild(sm); badge.appendChild(bi);
-
-        var info = document.createElement("div"); info.className = "info";
-        var cat = document.createElement("span"); cat.className = "cat"; cat.textContent = h.j;
-        if (esUlt) { var em = document.createElement("em"); em.className = "ult"; em.textContent = "Última"; cat.appendChild(em); }
-        else if (esTop) { var em2 = document.createElement("em"); em2.textContent = "🏆 Mejor jornada"; cat.appendChild(em2); }
-        var bar = document.createElement("div"); bar.className = "bar";
-        var fill = document.createElement("i"); bar.appendChild(fill);
-        info.appendChild(cat); info.appendChild(bar);
-
-        var prize = document.createElement("div"); prize.className = "prize" + (h.importe === 0 ? " zero" : "");
-        prize.textContent = h.importe === 0 ? "—" : "";
-
-        row.appendChild(badge); row.appendChild(info); row.appendChild(prize);
-        cont.appendChild(row);
-        if (h.importe > 0) setTimeout(function () { contar(prize, h.importe, function (v) { return fmt(v) + " €"; }); }, i * 60 + 150);
-        setTimeout(function () { fill.style.width = Math.max((h.importe / max) * 100, h.importe > 0 ? 6 : 0) + "%"; }, i * 60 + 250);
+      temporadas.forEach(function (t) {
+        var todas = historial.filter(function (h) { return h.temp === t; });
+        var total = todas.reduce(function (s, h) { return s + h.importe; }, 0);
+        // En la temporada activa, la última jornada ya está en el recuadro amarillo
+        var lista = (t === activa && todas.length) ? todas.slice(0, -1) : todas;
+        var det = document.createElement("details");
+        det.className = "temp";
+        if (t === activa) det.open = true;
+        var sum = document.createElement("summary");
+        sum.textContent = "Temporada " + t + (t === activa ? " · activa" : "");
+        var tt = document.createElement("span"); tt.className = "temp-tot";
+        tt.textContent = todas.length + (todas.length === 1 ? " jornada" : " jornadas") + " · " + fmt(total) + " €";
+        sum.appendChild(tt);
+        det.appendChild(sum);
+        if (!lista.length) {
+          var v = document.createElement("div"); v.className = "temp-vacia";
+          v.textContent = todas.length ? "La única jornada de la temporada es la de arriba." : "Todavía no hay jornadas en esta temporada.";
+          det.appendChild(v);
+        } else {
+          var max = Math.max.apply(null, todas.map(function (h) { return h.importe; })) || 1;
+          var box = document.createElement("div"); box.className = "list";
+          lista.slice().reverse().forEach(function (h, i) {
+            box.appendChild(tarjetaJornada(h, max, i, false, h.importe === max && h.importe > 0));
+          });
+          det.appendChild(box);
+        }
+        cont.appendChild(det);
       });
+    }
+
+    function pintarTotal(historial) {
+      var box = document.getElementById("totalFinal");
+      if (!historial.length) { box.style.display = "none"; return; }
+      box.style.display = "";
+      var total = historial.reduce(function (s, h) { return s + h.importe; }, 0);
+      contar(document.getElementById("totalAcumulado"), total, function (v) { return fmt(v) + " €"; });
+      document.getElementById("totalDetalle").textContent = historial.length + (historial.length === 1 ? " jornada" : " jornadas") + " en total";
+    }
+
+    function pintarTodo(historial, temporadas, activa, totalActual) {
+      var deActiva = historial.filter(function (h) { return h.temp === activa; });
+      pintarResumen(deActiva.length ? deActiva[deActiva.length - 1] : null, totalActual);
+      pintarTemporadas(historial, temporadas, activa);
+      pintarTotal(historial);
     }
 
     function mostrarError() {
@@ -356,7 +396,11 @@
         if (!res.ok) throw new Error("HTTP " + res.status);
         const datos = await res.json();
         const escrutinio = datos.escrutinio; // el JSON debe tener esta propiedad
-        const historial = Array.isArray(datos.historial) ? datos.historial : [];
+        const temporadas = Array.isArray(datos.temporadas) && datos.temporadas.length ? datos.temporadas : TEMP_DEFECTO;
+        const activa = datos.temporadaActiva || TEMP_ACTIVA;
+        const historial = (Array.isArray(datos.historial) ? datos.historial : []).map(function (h) {
+          return { j: h.j, temp: h.temp || activa, aciertos: Number(h.aciertos) || 0, importe: Number(h.importe) || 0 };
+        });
 
         // Ignoramos encabezados y procesamos solo datos
         const filas = escrutinio.slice(1).map(function (f) {
@@ -366,8 +410,7 @@
         if (!filas.length) {
           lista.innerHTML = '<div class="msg">Todavía no hay escrutinio disponible ⏳</div>';
           document.getElementById("subtitulo").textContent = "Vuelve en cuanto se publique";
-          pintarResumen(historial, 0);
-          pintarHistorial(historial);
+          pintarTodo(historial, temporadas, activa, 0);
           return;
         }
 
@@ -417,8 +460,7 @@
 
         document.getElementById("subtitulo").textContent = filas.length + " categorías de premio";
 
-        pintarResumen(historial, totalGanado);
-        pintarHistorial(historial);
+        pintarTodo(historial, temporadas, activa, totalGanado);
       } catch (error) {
         console.error("Error cargando el escrutinio:", error);
         mostrarError();

@@ -10,6 +10,9 @@ const HEAD_PRON = ["Nombre", ...Array.from({ length: 15 }, (_, i) => "P" + (i + 
 const HEAD_GLOBAL = ["Nombre", "Aciertos"];
 const NOMBRES_PREMIO = ["Pleno al 15", "1ª (14 Aciertos)", "2ª (13 Aciertos)", "3ª (12 Aciertos)", "4ª (11 Aciertos)", "5ª (10 Aciertos)"];
 
+const TEMPORADAS = ["2025-2026", "2026-2027"];
+const TEMPORADA_ACTIVA = "2026-2027";
+
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
     status,
@@ -128,7 +131,9 @@ function respuestaGET(d) {
     pronosticos: d.pronosticos.map(f => f.map(c => str(c))),
     clasificacion: clasificacion(d),
     escrutinio: escrutinio(d),
-    historial: d.historial || [],
+    historial: (d.historial || []).map(h => ({ ...h, temp: h.temp || TEMPORADA_ACTIVA })),
+    temporadas: TEMPORADAS,
+    temporadaActiva: TEMPORADA_ACTIVA,
     global: d.global, Global: d.global,
     usuarioEspecial: usuarioEspecial(d),
     datosPartido15: { local: p15[1] || "", visitante: p15[2] || "" },
@@ -169,9 +174,10 @@ function normGlobal(rows) {
   return [HEAD_GLOBAL, ...rows.filter(r => r && str(r[0])).map(r => [str(r[0]), Math.max(0, Math.floor(Number(r[1]) || 0))])];
 }
 function normHistorial(rows) {
-  if (!Array.isArray(rows) || rows.length > 200) throw new Error("Histórico no válido");
+  if (!Array.isArray(rows) || rows.length > 300) throw new Error("Histórico no válido");
   return rows.filter(r => r && typeof r === "object").map((r, i) => ({
     j: str(r.j) || "Jornada " + (i + 1),
+    temp: TEMPORADAS.includes(str(r.temp)) ? str(r.temp) : TEMPORADA_ACTIVA,
     aciertos: Math.min(15, Math.max(0, Math.floor(Number(r.aciertos) || 0))),
     importe: Math.round(Math.max(0, Number(String(r.importe).replace(",", ".")) || 0) * 100) / 100
   }));

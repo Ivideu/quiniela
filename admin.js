@@ -90,7 +90,8 @@
     "#qa-box .qa-hj input[type=text]{padding:8px 4px;text-align:center}",
     "#qa-box .qa-hj input.qa-hj-j{text-align:left;padding-left:8px}",
     ".qa-hj-cab{font-size:11px;color:#6b7785;text-transform:uppercase;letter-spacing:.5px;text-align:center}",
-    ".qa-histtot{margin-top:8px;text-align:center;font-weight:bold;color:#003366;background:#f8fbff;border:2px solid #b3d7ff;border-radius:10px;padding:10px}"
+    ".qa-histtot{margin-top:8px;text-align:center;font-weight:bold;color:#003366;background:#f8fbff;border:2px solid #b3d7ff;border-radius:10px;padding:10px}",
+    ".qa-hj-temp{margin:16px 0 6px;font-weight:bold;color:#003366;background:#e8f1fb;border-radius:8px;padding:8px 10px}"
   ].join("\n");
   var styleEl = document.createElement("style");
   styleEl.textContent = css;
@@ -164,7 +165,6 @@
           '<p class="qa-hint">Aciertos y lo cobrado en cada jornada. El total acumulado se calcula solo.</p>' +
           '<div id="qa-hist"></div>' +
           '<div class="qa-histtot" id="qa-hist-tot"></div>' +
-          '<button type="button" class="qa-sec" id="qa-hist-add">➕ Añadir jornada (con los datos de la actual)</button>' +
           '<button type="button" id="qa-hist-go">Guardar histórico</button>' +
           '<div class="qa-msg" id="qa-hist-msg"></div>' +
           '<h3>💶 Premios del escrutinio (€)</h3>' +
@@ -869,16 +869,21 @@
     for (var i = 1; i < e.length; i++) s += Number(e[i][2]) || 0;
     return s;
   }
+
+  function temporadasLista() {
+    return (DATA && DATA.temporadas && DATA.temporadas.length) ? DATA.temporadas : ["2025-2026", "2026-2027"];
+  }
+  function temporadaActiva() { return (DATA && DATA.temporadaActiva) || "2026-2027"; }
   function totalHistorial() {
     var t = 0, n = 0;
     Array.prototype.forEach.call(document.querySelectorAll("#qa-hist .qa-hj[data-fila]"), function (f) {
       t += aNum(f.querySelector(".qa-hj-i").value); n++;
     });
-    $("qa-hist-tot").textContent = "Total acumulado: " + fmtEur(t) + " · " + n + (n === 1 ? " jornada" : " jornadas");
+    $("qa-hist-tot").textContent = "Total acumulado (todas las temporadas): " + fmtEur(t) + " · " + n + (n === 1 ? " jornada" : " jornadas");
   }
-  function filaHistorial(h) {
+  function filaHistorial(h, temp) {
     var f = document.createElement("div");
-    f.className = "qa-hj"; f.setAttribute("data-fila", "1");
+    f.className = "qa-hj"; f.setAttribute("data-fila", "1"); f.setAttribute("data-temp", temp);
     var j = document.createElement("input"); j.type = "text"; j.className = "qa-hj-j"; j.value = h.j || ""; j.placeholder = "Jornada";
     var a = document.createElement("input"); a.type = "text"; a.className = "qa-hj-a"; a.setAttribute("inputmode", "numeric"); a.value = h.aciertos;
     var i = document.createElement("input"); i.type = "text"; i.className = "qa-hj-i"; i.setAttribute("inputmode", "decimal"); i.value = String(h.importe).replace(".", ",");
@@ -891,21 +896,45 @@
   function pintarHistorial() {
     var cont = $("qa-hist");
     cont.innerHTML = "";
-    var cab = document.createElement("div"); cab.className = "qa-hj";
-    ["Jornada", "Aciert.", "Cobrado €", ""].forEach(function (t) { var d = document.createElement("div"); d.className = "qa-hj-cab"; d.textContent = t; cab.appendChild(d); });
-    cont.appendChild(cab);
-    ((DATA && DATA.historial) || []).forEach(function (h) { cont.appendChild(filaHistorial(h)); });
+    var hist = (DATA && DATA.historial) || [];
+    var activa = temporadaActiva();
+    temporadasLista().forEach(function (t) {
+      var tit = document.createElement("div"); tit.className = "qa-hj-temp";
+      tit.textContent = "Temporada " + t + (t === activa ? " (activa)" : "");
+      cont.appendChild(tit);
+      var cab = document.createElement("div"); cab.className = "qa-hj";
+      ["Jornada", "Aciert.", "Cobrado €", ""].forEach(function (x) { var d = document.createElement("div"); d.className = "qa-hj-cab"; d.textContent = x; cab.appendChild(d); });
+      cont.appendChild(cab);
+      var caja = document.createElement("div");
+      hist.filter(function (h) { return (h.temp || activa) === t; })
+        .forEach(function (h) { caja.appendChild(filaHistorial(h, t)); });
+      cont.appendChild(caja);
+      var add = document.createElement("button");
+      add.type = "button"; add.className = "qa-sec";
+      add.textContent = "➕ Añadir jornada a " + t;
+      add.onclick = function () {
+        var n = caja.children.length + 1;
+        var esActiva = t === activa;
+        caja.appendChild(filaHistorial({
+          j: "Jornada " + n,
+          aciertos: esActiva ? mejorAciertos() : 0,
+          importe: esActiva ? Math.round(premiosActuales() * 100) / 100 : 0
+        }, t));
+        totalHistorial();
+      };
+      cont.appendChild(add);
+    });
     totalHistorial();
   }
-  $("qa-hist-add").onclick = function () {
-    var n = document.querySelectorAll("#qa-hist .qa-hj[data-fila]").length + 1;
-    $("qa-hist").appendChild(filaHistorial({ j: "Jornada " + n, aciertos: mejorAciertos(), importe: Math.round(premiosActuales() * 100) / 100 }));
-    totalHistorial();
-  };
   $("qa-hist-go").onclick = async function () {
     var filas = [];
     Array.prototype.forEach.call(document.querySelectorAll("#qa-hist .qa-hj[data-fila]"), function (f) {
-      filas.push({ j: f.querySelector(".qa-hj-j").value, aciertos: parseInt(f.querySelector(".qa-hj-a").value, 10) || 0, importe: aNum(f.querySelector(".qa-hj-i").value) });
+      filas.push({
+        j: f.querySelector(".qa-hj-j").value,
+        temp: f.getAttribute("data-temp"),
+        aciertos: parseInt(f.querySelector(".qa-hj-a").value, 10) || 0,
+        importe: aNum(f.querySelector(".qa-hj-i").value)
+      });
     });
     var btn = $("qa-hist-go");
     btn.disabled = true;
