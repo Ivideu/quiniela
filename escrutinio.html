@@ -281,16 +281,17 @@
 
     var TEMP_DEFECTO = ["2025-2026", "2026-2027"], TEMP_ACTIVA = "2026-2027";
 
-    function pintarResumen(ult, mejorJ) {
+   function pintarResumen(ult) {
       var imp = ult ? ult.importe : 0;
       var impEl = document.getElementById("jornadaImporte");
       if (imp > 0) contar(impEl, imp, function (v) { return fmt(v) + " €"; }); else impEl.textContent = "0,00 €";
       
-      var nombreJ = mejorJ && mejorJ.nombre ? mejorJ.nombre : "—";
-      var aciertosJ = mejorJ ? mejorJ.aciertos : (ult ? ult.aciertos : 0);
       var textJornada = ult && ult.j ? ult.j : "esta jornada";
 
-      document.getElementById("jornadaLabel").textContent = "Cobrado en " + textJornada + " con " + aciertosJ + " aciertos por " + nombreJ;
+      document.getElementById("jornadaLabel").textContent = "Cobrado en " + textJornada;
+      
+      var chip = document.getElementById("jornadaAciertos");
+      if (chip) chip.style.display = "none";
     }
 
     function tarjetaJornada(h, max, i, esTop) {
