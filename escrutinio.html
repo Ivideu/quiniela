@@ -87,7 +87,7 @@
     .hero h1 { margin: 6px 0 4px; font-size: 28px; letter-spacing: .4px; }
     .hero p { margin: 0; font-size: 14px; opacity: .92; }
 
-    /* Resumen cuadro naranja */
+    /* Cuadro naranja resumen */
     .summary { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
     .summary div {
       background: rgba(255,255,255,.18);
@@ -100,19 +100,16 @@
     .summary div.highlight {
       background: linear-gradient(135deg, #ffd23f, #ff9f1c, #ff7b00);
       color: #3a2200;
-      padding: 14px 8px;
+      padding: 16px 12px;
       box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 8px 24px rgba(255,140,0,.45);
       animation: glow 2.4s ease-in-out infinite;
     }
     .summary div.highlight .trophy { display: block; font-size: 30px; line-height: 1; margin-bottom: 4px; }
     .summary div.highlight strong { font-size: 32px; letter-spacing: .3px; }
-    .summary div.highlight small { opacity: 1; font-weight: 700; }
+    .summary div.highlight small { opacity: 1; font-weight: 700; display: block; margin-top: 6px; }
     @keyframes glow { 0%,100% { box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 8px 24px rgba(255,140,0,.45); } 50% { box-shadow: 0 0 0 4px rgba(255,255,255,.8), 0 8px 34px rgba(255,170,0,.8); } }
 
-    .info .cat { display: block; font-size: 15px; font-weight: 700; margin-bottom: 7px; }
-    .info .cat em { font-style: normal; font-weight: 600; font-size: 12px; color: var(--muted); margin-left: 6px; }
-
-    /* Estilos de las tarjetas de jornada dentro de desplegables */
+    /* Tarjetas de jornada dentro de los desplegables */
     .list { display: grid; gap: 12px; margin-top: 18px; }
     .row {
       position: relative;
@@ -131,7 +128,6 @@
       transition: transform .18s ease;
     }
     .row:hover { transform: translateY(-3px); }
-    .row:active { transform: scale(.985); }
     .row.top { border-left-color: var(--accent); }
     .row.top .badge { background: linear-gradient(135deg, #ffb703, #ff8c00); color: #fff; }
 
@@ -148,6 +144,9 @@
     }
     .badge small { display: block; font-size: 9px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; opacity: .8; margin-top: 2px; }
 
+    .info .cat { display: block; font-size: 15px; font-weight: 700; margin-bottom: 7px; }
+    .info .cat em { font-style: normal; font-weight: 600; font-size: 12px; color: var(--muted); margin-left: 6px; }
+
     .bar { height: 5px; border-radius: 4px; background: var(--line); overflow: hidden; }
     .bar i {
       display: block; height: 100%; width: 0;
@@ -160,7 +159,6 @@
     .prize { text-align: right; font-weight: 800; font-size: 18px; color: var(--ok); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .prize.zero { color: var(--muted); font-weight: 600; font-size: 14px; }
 
-    .chip { display: inline-block; margin-top: 6px; padding: 3px 12px; border-radius: 999px; background: rgba(58,34,0,.16); color: #3a2200; font-size: 12px; font-weight: 800; letter-spacing: .3px; }
     .hist h2 { margin: 28px 4px 0; font-size: 14px; text-transform: uppercase; letter-spacing: .9px; color: var(--primary); }
 
     details.temp { margin-top: 14px; background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 0 14px; }
@@ -177,7 +175,6 @@
     .total-final strong { display: block; font-size: 30px; margin: 4px 0; font-variant-numeric: tabular-nums; }
     .total-final span { font-size: 13px; opacity: .9; }
 
-    /* Esqueleto de carga */
     .skeleton { height: 82px; border-radius: 14px; background: linear-gradient(90deg, var(--card) 25%, var(--line) 50%, var(--card) 75%); background-size: 200% 100%; animation: sk 1.3s linear infinite; box-shadow: var(--shadow); margin-top: 14px; }
     @keyframes sk { to { background-position: -200% 0; } }
 
@@ -188,7 +185,6 @@
     }
     .msg button:hover { background: var(--primary-dark); }
 
-    /* Botón volver */
     a.back-link {
       display: flex; align-items: center; justify-content: center; gap: 8px;
       margin-top: 22px;
@@ -213,10 +209,6 @@
       .badge { width: 46px; height: 46px; font-size: 18px; }
       .prize { font-size: 16px; }
     }
-    @media (prefers-reduced-motion: reduce) {
-      * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
-      .row { opacity: 1; }
-    }
   </style>
 </head>
 <body>
@@ -232,8 +224,7 @@
         <div class="highlight">
           <span class="trophy" aria-hidden="true">🎯</span>
           <strong id="jornadaImporte">–</strong>
-          <small id="jornadaLabel">Cobrado en la última jornada</small>
-          <span class="chip" id="jornadaAciertos" style="display:none"></span>
+          <small id="jornadaLabel">Cobrado en esta jornada</small>
         </div>
       </div>
     </header>
@@ -260,7 +251,6 @@
   <script>
     const API_URL = "/api";
 
-    /* ---- Símbolos flotantes de fondo ---- */
     (function () {
       var box = document.getElementById('bgSymbols');
       var syms = ['€', '1', 'X', '2'];
@@ -277,7 +267,6 @@
 
     const fmt = n => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    /* Animación de contador numérico */
     function contar(el, hasta, formato, dur) {
       dur = dur || 1100;
       var ini = performance.now();
@@ -292,15 +281,16 @@
 
     var TEMP_DEFECTO = ["2025-2026", "2026-2027"], TEMP_ACTIVA = "2026-2027";
 
-    /* Recuadro amarillo: sólo la última jornada de la temporada activa */
-    function pintarResumen(ult) {
+    function pintarResumen(ult, mejorJ) {
       var imp = ult ? ult.importe : 0;
       var impEl = document.getElementById("jornadaImporte");
       if (imp > 0) contar(impEl, imp, function (v) { return fmt(v) + " €"; }); else impEl.textContent = "0,00 €";
-      document.getElementById("jornadaLabel").textContent = "Cobrado en " + (ult && ult.j ? ult.j : "la última jornada");
-      var chip = document.getElementById("jornadaAciertos");
-      chip.style.display = ult ? "inline-block" : "none";
-      if (ult) chip.textContent = ult.aciertos + (ult.aciertos === 1 ? " acierto" : " aciertos");
+      
+      var nombreJ = mejorJ && mejorJ.nombre ? mejorJ.nombre : "—";
+      var aciertosJ = mejorJ ? mejorJ.aciertos : (ult ? ult.aciertos : 0);
+      var textJornada = ult && ult.j ? ult.j : "esta jornada";
+
+      document.getElementById("jornadaLabel").textContent = "Cobrado en " + textJornada + " con " + aciertosJ + " aciertos por " + nombreJ;
     }
 
     function tarjetaJornada(h, max, i, esTop) {
@@ -329,7 +319,7 @@
       cont.innerHTML = "";
       sec.style.display = "";
 
-      // Mostramos la temporada activa primero (revertimos el array si la activa está al final)
+      // Mostramos la temporada activa primero invirtiendo el orden
       var listaTemps = temporadas.slice().reverse();
 
       listaTemps.forEach(function (t) {
@@ -372,11 +362,11 @@
       document.getElementById("totalDetalle").textContent = historial.length + (historial.length === 1 ? " jornada" : " jornadas") + " en total";
     }
 
-    function pintarTodo(historial, temporadas, activa) {
+    function pintarTodo(historial, temporadas, activa, mejorJ) {
       var deActiva = historial.filter(function (h) { return h.temp === activa; });
       var ultimaJornada = deActiva.length ? deActiva[deActiva.length - 1] : (historial.length ? historial[historial.length - 1] : null);
       
-      pintarResumen(ultimaJornada);
+      pintarResumen(ultimaJornada, mejorJ);
       pintarTemporadas(historial, temporadas, activa);
       pintarTotal(historial);
     }
@@ -400,12 +390,13 @@
         
         const temporadas = Array.isArray(datos.temporadas) && datos.temporadas.length ? datos.temporadas : TEMP_DEFECTO;
         const activa = datos.temporadaActiva || TEMP_ACTIVA;
+        const mejorJ = datos.mejorJugadorActual || null;
         const historial = (Array.isArray(datos.historial) ? datos.historial : []).map(function (h) {
           return { j: h.j, temp: h.temp || activa, aciertos: Number(h.aciertos) || 0, importe: Number(h.importe) || 0 };
         });
 
         cargando.style.display = "none";
-        pintarTodo(historial, temporadas, activa);
+        pintarTodo(historial, temporadas, activa, mejorJ);
       } catch (error) {
         console.error("Error cargando el escrutinio:", error);
         mostrarError();

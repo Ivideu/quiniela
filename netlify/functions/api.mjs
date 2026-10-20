@@ -114,6 +114,15 @@ function aciertos(d, fila) {
 function clasificacion(d) {
   return [["Nombre", "Aciertos"], ...d.pronosticos.slice(1).filter(f => str(f[0])).map(f => [str(f[0]), aciertos(d, f)])];
 }
+
+// Obtiene el mejor jugador de la jornada actual en función de sus aciertos
+function mejorJugadorJornada(d) {
+  const cls = clasificacion(d).slice(1);
+  if (!cls.length) return { nombre: "", aciertos: 0 };
+  cls.sort((a, b) => b[1] - a[1]);
+  return { nombre: cls[0][0], aciertos: cls[0][1] };
+}
+
 function escrutinio(d) {
   const res15 = norm15(d.partidos[15] && d.partidos[15][3]);
   const jug = d.pronosticos.slice(1).filter(f => str(f[0])).map(f => ({ n: aciertos(d, f), p15: norm15(f[15]) }));
@@ -126,6 +135,7 @@ function escrutinio(d) {
 function respuestaGET(d) {
   const p15 = d.partidos[15] || [];
   const cfg = d.config || {};
+  const mejorJ = mejorJugadorJornada(d);
   return {
     partidos: d.partidos,
     pronosticos: d.pronosticos.map(f => f.map(c => str(c))),
@@ -134,6 +144,7 @@ function respuestaGET(d) {
     historial: (d.historial || []).map(h => ({ ...h, temp: h.temp || TEMPORADA_ACTIVA })),
     temporadas: TEMPORADAS,
     temporadaActiva: TEMPORADA_ACTIVA,
+    mejorJugadorActual: mejorJ,
     global: d.global, Global: d.global,
     usuarioEspecial: usuarioEspecial(d),
     datosPartido15: { local: p15[1] || "", visitante: p15[2] || "" },
@@ -190,10 +201,9 @@ const VENTANA_DIAS = [5, 6, 0, 1];     // solo se usa si algún partido no tiene
 const VENTANA_DESDE = 12;              // solo se usa si algún partido no tiene hora legible
 const PAUSA_SUSPENDIDA_H = 6;
 
-// Ventana de consulta de cada partido (modo automático): solo se llama a la API mientras haya algún partido pendiente "en juego".
-const VENTANA_ANTES_MIN = 5;           // empieza 5 min antes de la hora de inicio
-const VENTANA_DESPUES_MIN = 165;       // termina 2 h 45 min después (90' + descanso + añadido + margen)
-const RECUPERACION_HORAS = 8;          // si pasada la ventana sigue sin resultado, se mira 1 vez por hora hasta 8 h después
+const VENTANA_ANTES_MIN = 5;           
+const VENTANA_DESPUES_MIN = 165;       
+const RECUPERACION_HORAS = 8;          
 
 const esSigno = v => v === "1" || v === "X" || v === "2";
 const nombreCorto = t => str(t).replace(/\s*\(.*$/, "");
@@ -281,10 +291,6 @@ function leerFixture(f) {
 const signoDe = (a, b) => a > b ? "1" : a < b ? "2" : "X";
 const golPleno = g => g >= 3 ? "M" : String(g);
 
-/* ---------- Hora de cada partido (columna "Hora") ----------
-   Entiende, entre otros: "16:15", "Sáb 16:15", "sab 16h15", "17/10 16:15", "17/10/2026 16:15",
-   "2026-10-17 16:15" y los números de Excel (0.677 = hora; 46312.677 = fecha + hora).
-   Si no se entiende, devuelve null y ese partido usa el horario general de siempre. */
 const DIAS_SEMANA = { dom: 0, lun: 1, mar: 2, mie: 3, jue: 4, vie: 5, sab: 6 };
 
 function leerHoraPartido(v) {
@@ -324,8 +330,6 @@ function leerHoraPartido(v) {
   return { h, mi, dia, dow };
 }
 
-// Posibles instantes de inicio (ms UTC) del partido i. null = hora ilegible.
-// Orden de preferencia para el día: fecha escrita en la hora > día guardado por una búsqueda anterior > día de la semana > desconocido (ayer, hoy y mañana).
 function iniciosPartido(i, fila, c0, ahora) {
   const h = leerHoraPartido(fila && fila[4]);
   if (!h) return null;
@@ -351,7 +355,6 @@ function partidoEnVentana(inicios, ahora) {
   const min = 60000;
   return inicios.some(t => {
     if (ahora >= t - VENTANA_ANTES_MIN * min && ahora <= t + VENTANA_DESPUES_MIN * min) return true;
-    // Recuperación: pasada la ventana y sin resultado, se mira una vez por hora (el cron pasa cada 20 min: el de los minutos 0-19)
     return ahora > t + VENTANA_DESPUES_MIN * min && ahora <= t + RECUPERACION_HORAS * 60 * min && new Date(ahora).getUTCMinutes() < 20;
   });
 }
@@ -375,9 +378,6 @@ export async function actualizarResultados({ forzar = false } = {}) {
   const dow = new Date(Date.UTC(+p.year, +p.month - 1, +p.day)).getUTCDay();
   if (!forzar) {
     if (c0.autoResultados !== true) return { ok: true, omitido: true, mensaje: "Automático desactivado", cambios: [] };
-
-    // Solo se consulta la API si algún partido pendiente está dentro de su ventana de juego.
-    // Los partidos cuya hora no se entiende usan el horario general (viernes a lunes desde las 12:00).
     const ahora = Date.now();
     const horarioGeneral = VENTANA_DIAS.includes(dow) && +p.hour >= VENTANA_DESDE;
     let enVentana = false;
@@ -401,7 +401,6 @@ export async function actualizarResultados({ forzar = false } = {}) {
 
   let fechas = [];
   if (forzar) {
-    // Para evitar bloqueos en el plan Free, limitamos la búsqueda manual a HOY y AYER.
     const maxAtras = Math.max(0, Number(process.env.FOOTBALL_API_ATRAS ?? 1) || 0);
     const atras = { 5: 0, 6: 1, 0: 2, 1: 3 }[dow];
     const desde = atras === undefined ? 0 : -Math.min(atras, maxAtras);
@@ -419,12 +418,7 @@ export async function actualizarResultados({ forzar = false } = {}) {
 
   for (let idx = 0; idx < fechas.length; idx++) {
     const fecha = fechas[idx];
-
-    // Pausa corta entre consultas (con 1 s sobra para el límite por minuto y no agota el tiempo de la función de Netlify)
-    if (idx > 0) {
-      await sleep(1000);
-    }
-
+    if (idx > 0) await sleep(1000);
     try {
       const r = await llamarApi("/fixtures", { date: fecha, timezone: "Europe/Madrid" });
       usadas++; correctas++;
@@ -512,7 +506,6 @@ export async function actualizarResultados({ forzar = false } = {}) {
   };
 }
 
-/* ---------- Admin ---------- */
 function passOK(p) {
   const real = process.env.ADMIN_PASS || "";
   if (!real || typeof p !== "string") return false;
@@ -613,7 +606,6 @@ async function admin(data) {
   }
 }
 
-/* ---------- Pronóstico de un jugador ---------- */
 async function guardarPronostico(data) {
   const d = await leer();
   if (cerrada(d)) return json({ resultado: "cerrado", detalle: "La quiniela está cerrada" });
@@ -636,7 +628,6 @@ async function guardarPronostico(data) {
   return json({ resultado: "ok" });
 }
 
-/* ---------- Entrada ---------- */
 export default async (req) => {
   try {
     if (req.method === "GET") return json(respuestaGET(await leer()));
