@@ -24,7 +24,10 @@ const store = () => getStore({ name: "quiniela", consistency: "strong" });
 const vacio = () => ({ partidos: [HEAD_PARTIDOS], pronosticos: [HEAD_PRON], global: [HEAD_GLOBAL], premios: [0, 0, 0, 0, 0, 0], historial: [], config: {} });
 async function leer() {
   const d = await store().get("datos", { type: "json" });
-  return Object.assign(vacio(), d || {});
+  const datos = Object.assign(vacio(), d || {});
+  // Limpia filas "Nombre" que se hubieran colado en la clasificación global (la cabecera es la fila 0)
+  datos.global = [datos.global[0] || HEAD_GLOBAL, ...datos.global.slice(1).filter(f => str(f && f[0]).toLowerCase() !== "nombre")];
+  return datos;
 }
 const guardar = d => store().setJSON("datos", d);
 
@@ -182,7 +185,8 @@ function normPronosticos(rows) {
 }
 function normGlobal(rows) {
   if (!Array.isArray(rows) || rows.length > 500) throw new Error("Datos globales no válidos");
-  return [HEAD_GLOBAL, ...rows.filter(r => r && str(r[0])).map(r => [str(r[0]), Math.max(0, Math.floor(Number(r[1]) || 0))])];
+  // Se descarta la fila de cabecera ("Nombre") para que no se guarde como si fuera un jugador
+  return [HEAD_GLOBAL, ...rows.filter(r => r && str(r[0]) && str(r[0]).toLowerCase() !== "nombre").map(r => [str(r[0]), Math.max(0, Math.floor(Number(r[1]) || 0))])];
 }
 function normHistorial(rows) {
   if (!Array.isArray(rows) || rows.length > 300) throw new Error("Histórico no válido");
