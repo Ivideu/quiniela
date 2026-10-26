@@ -519,6 +519,8 @@
     });
   }
   function sinTildes(t) { return String(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
+  // «Nombre» es la cabecera de las hojas, nunca un jugador
+  function esCabecera(v) { return sinTildes(v == null ? "" : v) === "nombre"; }
   function filasHoja(wb, nombre) {
     var n = wb.SheetNames.filter(function (x) { return sinTildes(x) === nombre; })[0];
     return n ? XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }) : null;
@@ -539,11 +541,11 @@
     return res;
   }
   function filasPronosticos(filas) {
-    return filas.filter(function (r) { var n = String(r[0] == null ? "" : r[0]).trim(); return n && sinTildes(n) !== "nombre"; })
+    return filas.filter(function (r) { var n = String(r[0] == null ? "" : r[0]).trim(); return n && !esCabecera(n); })
       .map(function (r) { var f = r.slice(0, 16); while (f.length < 16) f.push(""); return f; });
   }
   function filasGlobal(filas) {
-    return filas.filter(function (r) { var n = String(r[0] == null ? "" : r[0]).trim(); return n && sinTildes(n) !== "nombre"; })
+    return filas.filter(function (r) { var n = String(r[0] == null ? "" : r[0]).trim(); return n && !esCabecera(n); })
       .map(function (r) { return [r[0], r[1]]; });
   }
 
@@ -654,7 +656,10 @@
     var cont = $("qa-glob");
     cont.innerHTML = "";
     var mapa = {}, orden = [];
-    function add(n, v) { n = String(n == null ? "" : n).trim(); if (n && !(n in mapa)) { mapa[n] = v; orden.push(n); } }
+    function add(n, v) {
+      n = String(n == null ? "" : n).trim();
+      if (n && !esCabecera(n) && !(n in mapa)) { mapa[n] = v; orden.push(n); }
+    }
     ((DATA && DATA.global) || []).slice(1).forEach(function (f) { add(f[0], Math.max(0, Math.floor(Number(f[1]) || 0))); });
     ((DATA && DATA.pronosticos) || []).slice(1).forEach(function (f) { add(f[0], 0); });
     orden.forEach(function (n) {
@@ -669,14 +674,15 @@
     });
   }
   $("qa-glob-go").onclick = async function () {
-    var filas = [["Nombre", "Aciertos"]];
+    // Solo jugadores: la cabecera la añade el servidor (antes se enviaba aquí y se guardaba como un jugador «Nombre»)
+    var filas = [];
     Array.prototype.forEach.call(document.querySelectorAll("#qa-glob input"), function (i) { filas.push([i.getAttribute("data-n"), Math.max(0, parseInt(i.value, 10) || 0)]); });
     var btn = $("qa-glob-go");
     btn.disabled = true;
     setMsg("qa-glob-msg", "Guardando...");
     try {
       var r = await post({ action: "guardarGlobal", global: filas });
-      if (r.resultado === "ok") { DATA.global = filas; setMsg("qa-glob-msg", "✅ Victorias guardadas", "ok"); }
+      if (r.resultado === "ok") { DATA.global = [["Nombre", "Aciertos"]].concat(filas); setMsg("qa-glob-msg", "✅ Victorias guardadas", "ok"); }
       else setMsg("qa-glob-msg", r.error || "Error", "err");
     } catch (e) { setMsg("qa-glob-msg", "Error de conexión", "err"); }
     btn.disabled = false;
