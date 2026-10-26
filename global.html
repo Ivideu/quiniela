@@ -6,49 +6,87 @@
   <title>Clasificación general</title>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: 'Segoe UI', sans-serif; background-color: #e9eff5; margin: 0; padding: 0; display: flex; justify-content: center; min-height: 100vh; align-items: flex-start; }
-    .container { max-width: 620px; width: 100%; background: #fff; margin: 40px 20px; padding: 30px 24px; border-radius: 14px; box-shadow: 0 6px 22px rgba(0,51,102,0.12); }
-    h1 { text-align: center; margin: 0; color: #003366; text-transform: uppercase; letter-spacing: 1px; font-size: 1.6em; }
-    .sub { text-align: center; color: #5b7fa6; font-size: 14px; margin: 6px 0 0; }
-    .barra { height: 5px; border-radius: 3px; margin: 14px auto 0; max-width: 220px; background: linear-gradient(90deg, #d4a800 0 33%, #9aa9bb 33% 66%, #b87333 66% 100%); }
+    :root { --k: 1; --w: 108px; --d: 58px; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; min-height: 100vh;
+      display: flex; justify-content: center; align-items: flex-start; color: #e8f1ff;
+      background: radial-gradient(900px 500px at 50% -10%, #1d4f9c 0%, transparent 60%),
+                  radial-gradient(600px 400px at 100% 100%, #0b3a6e 0%, transparent 60%), #071a33;
+    }
+    .container {
+      max-width: 620px; width: 100%; margin: 40px 20px; padding: 30px 24px 26px; border-radius: 22px;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 30px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.18);
+    }
+    h1 { text-align: center; margin: 0; font-size: 1.6em; letter-spacing: 1px; text-transform: uppercase; color: #fff; text-shadow: 0 2px 18px rgba(80,160,255,.6); }
+    .sub { text-align: center; color: #9bbbe3; font-size: 14px; margin: 6px 0 0; }
+    .barra { height: 5px; border-radius: 3px; margin: 14px auto 0; max-width: 220px; background: linear-gradient(90deg, #ffd23f 0 33%, #c4cfdc 33% 66%, #d98a4e 66% 100%); box-shadow: 0 0 14px rgba(255,210,63,.5); }
 
-    /* ---------- Podio ---------- */
-    .podio { display: flex; justify-content: center; align-items: flex-end; gap: 8px; margin: 34px 0 6px; }
-    .col { flex: 1; max-width: 175px; min-width: 0; text-align: center; }
-    .corona { font-size: 26px; line-height: 1; height: 28px; }
-    .avatar { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; color: #fff; text-transform: uppercase; border: 3px solid; }
-    .nombre { font-weight: 700; color: #003366; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
-    .vict { font-size: 12px; color: #5b7fa6; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
-    .vict b { display: block; font-size: 26px; line-height: 1.1; color: #003366; letter-spacing: 0; }
-    .bloque { border-radius: 12px 12px 0 0; display: flex; flex-direction: column; align-items: center; padding-top: 10px; color: #fff; font-weight: 800; box-shadow: inset 0 -5px 0 rgba(0,0,0,.18); }
-    .bloque .medalla { font-size: 30px; line-height: 1; }
-    .bloque .pos { font-size: 22px; margin-top: 2px; text-shadow: 1px 1px 2px rgba(0,0,0,.3); }
-    .r1 .avatar { width: 68px; height: 68px; font-size: 27px; background: #d4a800; border-color: #ffd700; }
-    .r2 .avatar { background: #7f8fa3; border-color: #c4cfdc; }
-    .r3 .avatar { background: #a8683a; border-color: #e0a470; }
-    .r1 .bloque { height: 140px; background: linear-gradient(#ffd700, #c99a00); }
-    .r2 .bloque { height: 108px; background: linear-gradient(#cfd8e3, #8e9db0); }
-    .r3 .bloque { height: 84px;  background: linear-gradient(#e0a470, #a8683a); }
-    .base { height: 8px; background: #003366; border-radius: 0 0 8px 8px; margin-bottom: 26px; }
+    .aviso { text-align: center; margin: 22px auto; padding: 12px 14px; border-radius: 10px; background: rgba(255,210,63,.12); border: 1px solid rgba(255,210,63,.4); color: #ffe08a; font-weight: bold; font-size: 15px; }
 
-    .aviso { text-align: center; margin: 22px auto; padding: 12px 14px; border-radius: 8px; background: #fff3cd; border: 1px solid #ffe08a; color: #7a5b00; font-weight: bold; font-size: 15px; }
+    /* ---------- Podio 3D ---------- */
+    .escena { perspective: 1100px; perspective-origin: 50% 35%; margin: 38px 0 0; padding-bottom: 38px; position: relative; }
+    .podio { display: flex; justify-content: center; align-items: flex-end; gap: 30px; transform-style: preserve-3d; transform: rotateX(-13deg) rotateY(-20deg); }
+    .suelo { position: absolute; left: 4%; right: 4%; bottom: 6px; height: 46px; border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(90,170,255,.45), rgba(90,170,255,0) 70%); filter: blur(6px); }
+    .col { width: var(--w); text-align: center; transform-style: preserve-3d; animation: sube .9s cubic-bezier(.2,.9,.3,1.15) both; }
+    .col.r1 { animation-delay: .35s; } .col.r2 { animation-delay: .1s; } .col.r3 { animation-delay: .22s; }
+    @keyframes sube { from { opacity: 0; transform: translateY(60px); } to { opacity: 1; transform: none; } }
+
+    .corona { font-size: 28px; line-height: 1; height: 32px; animation: flota 2.6s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(255,210,63,.7)); }
+    @keyframes flota { 50% { transform: translateY(-6px) rotate(4deg); } }
+    .avatar { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; color: #fff; text-transform: uppercase; border: 3px solid; box-shadow: 0 10px 18px rgba(0,0,0,.45); transform: translateZ(30px); }
+    .nombre { font-weight: 700; color: #fff; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+    .vict { font-size: 12px; color: #9bbbe3; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .5px; }
+    .vict b { display: block; font-size: 28px; line-height: 1.1; color: #fff; letter-spacing: 0; }
+
+    .r1 .avatar { width: 68px; height: 68px; font-size: 27px; background: linear-gradient(135deg, #ffe066, #d4a800); border-color: #fff1a8; animation: brillo 2.4s ease-in-out infinite; }
+    .r2 .avatar { background: linear-gradient(135deg, #a8b6c8, #6f7f94); border-color: #dfe7f0; }
+    .r3 .avatar { background: linear-gradient(135deg, #d99a66, #9a5b2e); border-color: #f0c39c; }
+    @keyframes brillo { 50% { box-shadow: 0 10px 18px rgba(0,0,0,.45), 0 0 30px rgba(255,214,64,.85); } }
+
+    /* Cubo: 5 caras reales */
+    .cubo { position: relative; width: var(--w); height: var(--h); transform-style: preserve-3d; }
+    .cara { position: absolute; }
+    .frente { inset: 0; transform: translateZ(calc(var(--d) / 2)); background: linear-gradient(var(--f1), var(--f2)); border-radius: 3px 3px 0 0;
+      display: flex; flex-direction: column; align-items: center; padding-top: 12px; color: #fff; font-weight: 800; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+    .der, .izq { top: 0; left: calc(50% - var(--d) / 2); width: var(--d); height: 100%; background: linear-gradient(var(--s1), var(--s2)); }
+    .der { transform: rotateY(90deg) translateZ(calc(var(--w) / 2)); }
+    .izq { transform: rotateY(-90deg) translateZ(calc(var(--w) / 2)); filter: brightness(.7); }
+    .sup { left: 0; top: calc(50% - var(--d) / 2); width: 100%; height: var(--d); transform: rotateX(90deg) translateZ(calc(var(--h) / 2)); background: var(--t); }
+    .medalla { font-size: 32px; line-height: 1; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
+    .pos { font-size: 26px; margin-top: 2px; text-shadow: 0 2px 4px rgba(0,0,0,.4); }
+
+    .r1 .cubo { --h: calc(150px * var(--k)); --f1: #ffd84d; --f2: #c99a00; --s1: #b88a00; --s2: #7a5a00; --t: linear-gradient(135deg, #fff2a0, #ffd84d); }
+    .r2 .cubo { --h: calc(112px * var(--k)); --f1: #d3dce8; --f2: #8191a6; --s1: #7384a0; --s2: #4a5a72; --t: linear-gradient(135deg, #f1f5fa, #cfd8e3); }
+    .r3 .cubo { --h: calc(84px * var(--k)); --f1: #e5a876; --f2: #a8683a; --s1: #935a30; --s2: #5f3a1c; --t: linear-gradient(135deg, #f6cfa6, #e5a876); }
 
     /* ---------- Resto de jugadores ---------- */
-    .fila { display: grid; grid-template-columns: 34px 1fr minmax(60px, 120px) 58px; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 10px; }
-    .fila:nth-child(odd) { background: #f2f8ff; }
-    .rango { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #0077cc; color: #0077cc; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; background: #fff; }
-    .fila .n { font-weight: 600; color: #003366; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .pista { height: 10px; background: #dbe7f4; border-radius: 6px; overflow: hidden; }
-    .pista i { display: block; height: 100%; background: linear-gradient(90deg, #0077cc, #4aa3e8); border-radius: 6px; }
-    .fila .v { text-align: right; font-weight: 800; color: #003366; white-space: nowrap; }
+    #resto { margin-top: 6px; display: grid; gap: 8px; }
+    .fila { display: grid; grid-template-columns: 34px 1fr minmax(60px, 120px) 58px; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)); border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 6px 0 rgba(0,0,0,.25), 0 12px 20px rgba(0,0,0,.25); transition: transform .2s, box-shadow .2s; }
+    .fila:hover { transform: translateY(-3px); box-shadow: 0 9px 0 rgba(0,0,0,.25), 0 18px 26px rgba(0,0,0,.3); }
+    .rango { width: 30px; height: 30px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;
+      background: linear-gradient(135deg, #3aa0ff, #0b5fc0); box-shadow: 0 3px 0 #083d7d, inset 0 1px 0 rgba(255,255,255,.4); }
+    .fila .n { font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pista { height: 10px; background: rgba(0,0,0,.35); border-radius: 6px; overflow: hidden; box-shadow: inset 0 2px 3px rgba(0,0,0,.5); }
+    .pista i { display: block; height: 100%; background: linear-gradient(90deg, #2d9bff, #6fe0ff); border-radius: 6px; box-shadow: 0 0 10px rgba(80,200,255,.8); }
+    .fila .v { text-align: right; font-weight: 800; color: #fff; white-space: nowrap; }
 
-    .msg { text-align: center; padding: 30px; color: #555; }
-    .back-link { display: inline-block; margin-top: 24px; text-decoration: none; background: #0077cc; color: white !important; padding: 10px 15px; border-radius: 6px; text-align: center; }
-    .back-link:hover { background: #005fa3; }
+    .msg { text-align: center; padding: 30px; color: #9bbbe3; }
+    .back-link { display: inline-block; margin-top: 26px; text-decoration: none; color: #fff !important; padding: 11px 18px; border-radius: 10px; font-weight: 600;
+      background: linear-gradient(180deg, #2d9bff, #0b5fc0); box-shadow: 0 5px 0 #083d7d, 0 12px 20px rgba(0,0,0,.35); transition: transform .15s, box-shadow .15s; }
+    .back-link:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #083d7d, 0 16px 24px rgba(0,0,0,.4); }
+    .back-link:active { transform: translateY(4px); box-shadow: 0 1px 0 #083d7d; }
     .pie { text-align: center; }
 
+    @media (prefers-reduced-motion: reduce) { .col, .corona, .r1 .avatar { animation: none; } }
     @media (max-width: 440px) {
+      :root { --k: .8; --w: 84px; --d: 44px; }
       .container { margin: 16px 10px; padding: 22px 12px; }
+      .podio { gap: 18px; transform: rotateX(-12deg) rotateY(-16deg); }
       .avatar { width: 46px; height: 46px; font-size: 18px; } .r1 .avatar { width: 56px; height: 56px; font-size: 22px; }
       .nombre { font-size: 13px; } .vict b { font-size: 22px; }
       .fila { grid-template-columns: 30px 1fr 50px; } .pista { display: none; }
@@ -63,7 +101,10 @@
     <div class="barra"></div>
 
     <div id="aviso" class="aviso" style="display:none"></div>
-    <div id="podio" class="podio"></div>
+    <div class="escena" id="escena">
+      <div id="podio" class="podio"></div>
+      <div class="suelo"></div>
+    </div>
     <div id="resto"></div>
 
     <div class="pie"><a class="back-link" href="index.html">← Volver a inicio</a></div>
@@ -86,17 +127,17 @@
       const data = await res.json();
 
       // Victorias que pones en el panel admin; los jugadores que aún no tienen ninguna salen con 0
-const mapa = new Map();
-const esCabecera = n => n.toLowerCase() === "nombre";
+      const mapa = new Map();
+      const esCabecera = n => n.toLowerCase() === "nombre";
 
-(data.global || data.Global || []).forEach(f => {
-  const n = String(f[0] == null ? "" : f[0]).trim();
-  if (n && !esCabecera(n)) mapa.set(n, Math.max(0, Number(f[1]) || 0));
-});
-(data.pronosticos || []).forEach(f => {
-  const n = String(f[0] == null ? "" : f[0]).trim();
-  if (n && !esCabecera(n) && !mapa.has(n)) mapa.set(n, 0);
-});
+      (data.global || data.Global || []).forEach(f => {
+        const n = String(f[0] == null ? "" : f[0]).trim();
+        if (n && !esCabecera(n)) mapa.set(n, Math.max(0, Number(f[1]) || 0));
+      });
+      (data.pronosticos || []).forEach(f => {
+        const n = String(f[0] == null ? "" : f[0]).trim();
+        if (n && !esCabecera(n) && !mapa.has(n)) mapa.set(n, 0);
+      });
 
       const lista = [...mapa].map(([nombre, v]) => ({ nombre, v }))
         .sort((a, b) => b.v - a.v || a.nombre.localeCompare(b.nombre, "es"));
@@ -134,14 +175,19 @@ const esCabecera = n => n.toLowerCase() === "nombre";
         v.appendChild(el("b", "", String(j.v)));
         v.appendChild(document.createTextNode(plural(j.v)));
         col.appendChild(v);
-        const b = el("div", "bloque");
-        b.appendChild(el("div", "medalla", ["🥇", "🥈", "🥉"][rango - 1]));
-        b.appendChild(el("div", "pos", j.rank + "º"));
-        col.appendChild(b);
+
+        const cubo = el("div", "cubo");
+        const frente = el("div", "cara frente");
+        frente.appendChild(el("div", "medalla", ["🥇", "🥈", "🥉"][rango - 1]));
+        frente.appendChild(el("div", "pos", j.rank + "º"));
+        cubo.appendChild(frente);
+        cubo.appendChild(el("div", "cara der"));
+        cubo.appendChild(el("div", "cara izq"));
+        cubo.appendChild(el("div", "cara sup"));
+        col.appendChild(cubo);
         podio.appendChild(col);
       });
-      if (enPodio.length) podio.after(el("div", "base"));
-      else podio.style.display = "none";
+      if (!enPodio.length) document.getElementById("escena").style.display = "none";
 
       // El resto de jugadores, con su número de victorias al lado
       const resto = document.getElementById("resto");
