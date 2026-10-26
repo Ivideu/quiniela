@@ -35,12 +35,17 @@
 
     /* ---------- Podio 3D ---------- */
     .escena { perspective: 1100px; perspective-origin: 50% 35%; margin: 38px 0 0; padding-bottom: 38px; position: relative; }
-    .podio { display: flex; justify-content: center; align-items: flex-end; gap: 30px; transform-style: preserve-3d; transform: rotateX(-13deg) rotateY(-20deg); }
+    .podio { display: flex; justify-content: center; align-items: flex-end; gap: 30px; transform-style: preserve-3d; transform: rotateX(-13deg); }
     .suelo { position: absolute; left: 4%; right: 4%; bottom: 6px; height: 46px; border-radius: 50%;
       background: radial-gradient(ellipse at center, rgba(0,70,150,.28), rgba(0,70,150,0) 70%); filter: blur(6px); }
-    .col { width: var(--w); text-align: center; transform-style: preserve-3d; animation: sube .9s cubic-bezier(.2,.9,.3,1.15) both; }
-    .col.r1 { animation-delay: .35s; } .col.r2 { animation-delay: .1s; } .col.r3 { animation-delay: .22s; }
-    @keyframes sube { from { opacity: 0; transform: translateY(60px); } to { opacity: 1; transform: none; } }
+    .col { width: var(--w); text-align: center; transform-style: preserve-3d; transform: rotateY(var(--ry, 0deg)); animation: sube 1s cubic-bezier(.2,.9,.3,1.1) both; }
+    @keyframes sube {
+      from { opacity: 0; transform: translateY(70px) rotateY(calc(var(--ry, 0deg) + var(--spin, 0deg))); }
+      to   { opacity: 1; transform: translateY(0) rotateY(var(--ry, 0deg)); }
+    }
+    .suelo { animation: aparece 1s ease both; }
+    @keyframes aparece { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes entra { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: none; } }
 
     .corona { font-size: 28px; line-height: 1; height: 32px; animation: flota 2.6s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(255,210,63,.7)); }
     @keyframes flota { 50% { transform: translateY(-6px) rotate(4deg); } }
@@ -74,7 +79,7 @@
     #resto { margin-top: 6px; display: grid; gap: 8px; }
     .fila { display: grid; grid-template-columns: 34px 1fr minmax(60px, 120px) 58px; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px;
       background: linear-gradient(180deg, #ffffff, #eef5fc); border: 1px solid #d3e3f4;
-      box-shadow: 0 5px 0 #c3d7ec, 0 12px 18px rgba(0,51,102,.12); transition: transform .2s, box-shadow .2s; }
+      box-shadow: 0 5px 0 #c3d7ec, 0 12px 18px rgba(0,51,102,.12); animation: entra .55s cubic-bezier(.2,.8,.3,1) backwards; transition: transform .2s, box-shadow .2s; }
     .fila:hover { transform: translateY(-3px); box-shadow: 0 8px 0 #c3d7ec, 0 18px 24px rgba(0,51,102,.18); }
     .rango { width: 30px; height: 30px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;
       background: linear-gradient(135deg, #3aa0ff, #0b5fc0); box-shadow: 0 3px 0 #083d7d, inset 0 1px 0 rgba(255,255,255,.4); }
@@ -90,11 +95,11 @@
     .back-link:active { transform: translateY(4px); box-shadow: 0 1px 0 #083d7d; }
     .pie { text-align: center; }
 
-    @media (prefers-reduced-motion: reduce) { .col, .corona, .r1 .avatar, .fondo span { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { .col, .corona, .r1 .avatar, .fondo span, .suelo, .fila { animation: none; } }
     @media (max-width: 440px) {
       :root { --k: .8; --w: 84px; --d: 44px; }
       .container { margin: 16px 10px; padding: 22px 12px; }
-      .podio { gap: 18px; transform: rotateX(-12deg) rotateY(-16deg); }
+      .podio { gap: 18px; transform: rotateX(-12deg); }
       .avatar { width: 46px; height: 46px; font-size: 18px; } .r1 .avatar { width: 56px; height: 56px; font-size: 22px; }
       .nombre { font-size: 13px; } .vict b { font-size: 22px; }
       .fila { grid-template-columns: 30px 1fr 50px; } .pista { display: none; }
@@ -192,12 +197,24 @@
       }
 
       // Podio: 2º a la izquierda, 1º en el centro, 3º a la derecha
+      // Orden de aparición: primero las filas (4º, 5º...), luego 3º, 2º y por último 1º
+      const restantes = lista.filter(j => !enPodio.includes(j));
+      const tFilas = Math.min(restantes.length * 0.18, 1.4);
+      const t0 = restantes.length ? tFilas + 0.35 : 0.1;
+      const aparicion = [2, 1, 0].filter(i => enPodio[i]);   // posiciones del podio: 0 = centro, 1 = izquierda, 2 = derecha
+      const giro = [0, 26, -26];     // 2º y 3º miran hacia el centro
+      const spin = [120, 70, -70];
+      document.querySelector(".suelo").style.animationDelay = t0 + "s";
+
       const podio = document.getElementById("podio");
       const orden = [1, 0, 2].filter(i => enPodio[i]);
       orden.forEach(i => {
         const j = enPodio[i];
         const rango = Math.min(j.rank, 3);
         const col = el("div", "col r" + rango);
+        col.style.setProperty("--ry", giro[i] + "deg");
+        col.style.setProperty("--spin", spin[i] + "deg");
+        col.style.animationDelay = (t0 + aparicion.indexOf(i) * 0.85).toFixed(2) + "s";
         col.appendChild(el("div", "corona", rango === 1 ? "👑" : ""));
         col.appendChild(el("div", "avatar", j.nombre.charAt(0) || "?"));
         const n = el("div", "nombre", j.nombre);
@@ -223,8 +240,9 @@
 
       // El resto de jugadores, con su número de victorias al lado
       const resto = document.getElementById("resto");
-      lista.filter(j => !enPodio.includes(j)).forEach(j => {
+      restantes.forEach((j, n) => {
         const f = el("div", "fila");
+        f.style.animationDelay = (n * 0.18).toFixed(2) + "s";
         f.appendChild(el("div", "rango", j.rank + "º"));
         f.appendChild(el("div", "n", j.nombre));
         const pista = el("div", "pista");
@@ -245,4 +263,4 @@
 </script>
 
 </body>
-</html>
+</html> 
