@@ -86,15 +86,17 @@
       const data = await res.json();
 
       // Victorias que pones en el panel admin; los jugadores que aún no tienen ninguna salen con 0
-      const mapa = new Map();
-      (data.global || data.Global || []).slice(1).forEach(f => {
-        const n = String(f[0] == null ? "" : f[0]).trim();
-        if (n) mapa.set(n, Math.max(0, Number(f[1]) || 0));
-      });
-      (data.pronosticos || []).slice(1).forEach(f => {
-        const n = String(f[0] == null ? "" : f[0]).trim();
-        if (n && !mapa.has(n)) mapa.set(n, 0);
-      });
+const mapa = new Map();
+const esCabecera = n => n.toLowerCase() === "nombre";
+
+(data.global || data.Global || []).forEach(f => {
+  const n = String(f[0] == null ? "" : f[0]).trim();
+  if (n && !esCabecera(n)) mapa.set(n, Math.max(0, Number(f[1]) || 0));
+});
+(data.pronosticos || []).forEach(f => {
+  const n = String(f[0] == null ? "" : f[0]).trim();
+  if (n && !esCabecera(n) && !mapa.has(n)) mapa.set(n, 0);
+});
 
       const lista = [...mapa].map(([nombre, v]) => ({ nombre, v }))
         .sort((a, b) => b.v - a.v || a.nombre.localeCompare(b.nombre, "es"));
