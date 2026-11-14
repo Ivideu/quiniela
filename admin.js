@@ -135,6 +135,29 @@
           '</div>' +
           '<button type="button" id="qa-guardar">💾 Guardar resultados</button>' +
           '<div class="qa-msg" id="qa-res-msg"></div>' +
+          '<h3>✏️ Editar apuestas de un jugador</h3>' +
+          '<p class="qa-hint">Elige quién echó la quiniela para corregir sus pronósticos y su pleno al 15, o crea un jugador nuevo. Funciona aunque la quiniela esté cerrada.</p>' +
+          '<select id="qa-ej-sel"></select>' +
+          '<button type="button" class="qa-gold" id="qa-ej-abrir">✏️ Editar jugador</button>' +
+          '<div id="qa-ej-editor" style="display:none">' +
+            '<h3 style="margin-top:16px">Nombre del jugador</h3>' +
+            '<input type="text" id="qa-ej-nombre" placeholder="Nombre" autocomplete="off" />' +
+            '<div class="qa-boleto" style="margin-top:12px">' +
+              '<div class="qa-bol-head"><b>APUESTAS</b><span>Toca de nuevo una casilla para quitarla</span></div>' +
+              '<div id="qa-ej-lista"></div>' +
+              '<div id="qa-ej-pleno" style="display:none">' +
+                '<div class="qa-pl-title">🔥 PLENO AL 15</div>' +
+                '<div class="qa-pl-match" id="qa-ej-pleno-label"></div>' +
+                '<div class="qa-pl-grid"><div class="qa-pl-eq" id="qa-ej-pl-l"></div><div class="qa-pl-eq" id="qa-ej-pl-v"></div></div>' +
+                '<div class="qa-pl-res" id="qa-ej-pl-res"></div>' +
+              '</div>' +
+              '<div class="qa-bol-foot"><span id="qa-ej-contador">Marcados: 0/14</span><button type="button" class="qa-link" id="qa-ej-borrar-marcas">Quitar marcas</button></div>' +
+            '</div>' +
+            '<button type="button" id="qa-ej-guardar">💾 Guardar jugador</button>' +
+            '<button type="button" class="qa-rojo" id="qa-ej-eliminar">🗑️ Borrar jugador</button>' +
+            '<button type="button" class="qa-sec" id="qa-ej-cancelar">Cancelar</button>' +
+          '</div>' +
+          '<div class="qa-msg" id="qa-ej-msg"></div>' +
           '<h3>📥 Importar jornada desde Excel</h3>' +
           '<p class="qa-hint">Sube tu Excel (hoja «Partidos»; opcionalmente «Pronosticos» y «Global») o pega aquí las celdas A:J de Partidos copiadas de Excel.</p>' +
           '<input type="file" id="qa-imp-file" accept=".xlsx,.xls,.csv" />' +
@@ -253,14 +276,14 @@
     $("qa-panel").style.display = "block";
     $("qa-contenido").style.display = "none";
     setMsg("qa-carga-msg", "Cargando datos...");
-    setMsg("qa-rotar-msg", ""); setMsg("qa-res-msg", ""); setMsg("qa-cierre-msg", ""); setMsg("qa-voz-msg", "");
+    setMsg("qa-rotar-msg", ""); setMsg("qa-res-msg", ""); setMsg("qa-cierre-msg", ""); setMsg("qa-voz-msg", ""); setMsg("qa-ej-msg", "");
     try {
       DATA = await leerDatos();
       setMsg("qa-carga-msg", "");
       pintarEstado();
       pintarEspecial();
       pintarPartidos();
-      pintarPremios(); pintarGlobal(); pintarHistorial();
+      pintarPremios(); pintarGlobal(); pintarHistorial(); pintarJugadores();
       $("qa-voz-vis").checked = DATA.vozVisible !== false;
       $("qa-contenido").style.display = "block";
     } catch (e) {
@@ -505,6 +528,174 @@
     btn.disabled = false;
   };
 
+
+  /* ---------- Editar apuestas de un jugador ---------- */
+  var EJ = { orig: "", picks: [], plL: "", plV: "" };
+  var EJ_NUEVO = "__nuevo__";
+
+  function filaJugador(nombre) {
+    var f = null;
+    ((DATA && DATA.pronosticos) || []).slice(1).forEach(function (x) {
+      if (!f && String(x[0]).trim().toLowerCase() === String(nombre).trim().toLowerCase()) f = x;
+    });
+    return f;
+  }
+  function pintarJugadores(elegir) {
+    var sel = $("qa-ej-sel");
+    sel.innerHTML = "";
+    function op(v, t) { var o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); }
+    op("", "— ¿Qué jugador echó la quiniela? —");
+    var nombres = [];
+    ((DATA && DATA.pronosticos) || []).slice(1).forEach(function (f) {
+      var n = String(f[0] == null ? "" : f[0]).trim();
+      if (n && n.toLowerCase() !== "nombre") nombres.push(n);
+    });
+    nombres.sort(function (a, b) { return a.localeCompare(b, "es"); });
+    nombres.forEach(function (n) { op(n, n); });
+    op(EJ_NUEVO, "➕ Nuevo jugador");
+    sel.value = elegir || "";
+  }
+  function cerrarEditorJugador() {
+    $("qa-ej-editor").style.display = "none";
+    $("qa-ej-sel").value = "";
+  }
+  function contarEJ() {
+    var n = 0;
+    EJ.picks.forEach(function (v) { if (v) n++; });
+    $("qa-ej-contador").textContent = "Marcados: " + n + "/14";
+  }
+  function pintarPlenoEJ() {
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-ej-pl-l .qa-cas"), function (b) { b.classList.toggle("on", b.getAttribute("data-v") === EJ.plL); });
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-ej-pl-v .qa-cas"), function (b) { b.classList.toggle("on", b.getAttribute("data-v") === EJ.plV); });
+    $("qa-ej-pl-res").textContent = (EJ.plL || EJ.plV) ? "Pleno: " + (EJ.plL || "?") + " - " + (EJ.plV || "?") : "";
+  }
+  function abrirEditorJugador(nombre) {
+    var fila = nombre ? filaJugador(nombre) : null;
+    EJ.orig = fila ? String(fila[0]).trim() : "";
+    $("qa-ej-nombre").value = EJ.orig;
+    EJ.picks = [];
+    for (var i = 1; i <= 14; i++) EJ.picks.push(fila ? limpiaRes(fila[i]) : "");
+    var pl = (fila ? limpiaPleno(fila[15]) : "").split("-");
+    EJ.plL = pl[0] || ""; EJ.plV = pl[1] || "";
+
+    var partidos = (DATA && DATA.partidos) || [];
+    var lista = $("qa-ej-lista");
+    lista.innerHTML = "";
+    for (var k = 1; k <= 14; k++) {
+      (function (k) {
+        var p = partidos[k];
+        if (!p) return;
+        var f = document.createElement("div"); f.className = "qa-fila";
+        var num = document.createElement("div"); num.className = "qa-num"; num.textContent = String(p[0] || k);
+        var eq = document.createElement("div"); eq.className = "qa-eq";
+        eq.appendChild(nombreEquipo(p[1]));
+        var vs = document.createElement("span"); vs.className = "qa-vs"; vs.textContent = "—  VS  —"; eq.appendChild(vs);
+        eq.appendChild(nombreEquipo(p[2]));
+        var grp = document.createElement("div"); grp.className = "qa-cas-grp";
+        ["1", "X", "2"].forEach(function (v) {
+          var c = nuevaCasilla(v, EJ.picks[k - 1] === v);
+          c.onclick = function () {
+            var yaOn = EJ.picks[k - 1] === v;
+            EJ.picks[k - 1] = yaOn ? "" : v;
+            Array.prototype.forEach.call(grp.querySelectorAll(".qa-cas"), function (x) { x.classList.toggle("on", x.getAttribute("data-v") === EJ.picks[k - 1]); });
+            contarEJ();
+          };
+          grp.appendChild(c);
+        });
+        f.appendChild(num); f.appendChild(eq); f.appendChild(grp);
+        lista.appendChild(f);
+      })(k);
+    }
+    contarEJ();
+
+    var p15 = partidos[15];
+    var caja = $("qa-ej-pleno");
+    if (p15) {
+      caja.style.display = "block";
+      $("qa-ej-pleno-label").textContent = p15[1] + " vs " + p15[2];
+      [["qa-ej-pl-l", p15[1], "L"], ["qa-ej-pl-v", p15[2], "V"]].forEach(function (cfg) {
+        var cont = $(cfg[0]); cont.innerHTML = "";
+        var tit = document.createElement("div"); tit.textContent = String(cfg[1]).replace(/\s*\(.*$/, ""); cont.appendChild(tit);
+        var g = document.createElement("div"); g.className = "qa-cas-grp";
+        ["0", "1", "2", "M"].forEach(function (v) {
+          var c = nuevaCasilla(v, false);
+          c.onclick = function () {
+            if (cfg[2] === "L") EJ.plL = (EJ.plL === v) ? "" : v; else EJ.plV = (EJ.plV === v) ? "" : v;
+            pintarPlenoEJ();
+          };
+          g.appendChild(c);
+        });
+        cont.appendChild(g);
+      });
+      pintarPlenoEJ();
+    } else {
+      caja.style.display = "none";
+    }
+    $("qa-ej-eliminar").style.display = EJ.orig ? "block" : "none";
+    $("qa-ej-editor").style.display = "block";
+    setMsg("qa-ej-msg", "");
+  }
+
+  $("qa-ej-abrir").onclick = function () {
+    var v = $("qa-ej-sel").value;
+    if (!v) { setMsg("qa-ej-msg", "Elige primero un jugador (o «Nuevo jugador»)", "err"); return; }
+    if (!(DATA && DATA.partidos && DATA.partidos.length > 15)) { setMsg("qa-ej-msg", "Primero importa los partidos", "err"); return; }
+    abrirEditorJugador(v === EJ_NUEVO ? "" : v);
+  };
+  $("qa-ej-sel").onchange = function () { if ($("qa-ej-editor").style.display !== "none") $("qa-ej-abrir").click(); };
+  $("qa-ej-cancelar").onclick = function () { cerrarEditorJugador(); setMsg("qa-ej-msg", ""); };
+  $("qa-ej-borrar-marcas").onclick = function () {
+    EJ.picks = EJ.picks.map(function () { return ""; });
+    EJ.plL = ""; EJ.plV = "";
+    Array.prototype.forEach.call(document.querySelectorAll("#qa-ej-lista .qa-cas.on"), function (b) { b.classList.remove("on"); });
+    pintarPlenoEJ(); contarEJ();
+  };
+
+  async function refrescarTrasEditar(elegir) {
+    DATA = await leerDatos();
+    pintarJugadores(elegir); pintarGlobal();
+    if (typeof pintarHistorial === "function") { pintarHistorial(); }
+  }
+
+  $("qa-ej-guardar").onclick = async function () {
+    var nombre = $("qa-ej-nombre").value.trim();
+    if (!nombre) { setMsg("qa-ej-msg", "Escribe el nombre del jugador", "err"); return; }
+    var p15 = "";
+    if (EJ.plL && EJ.plV) p15 = EJ.plL + "-" + EJ.plV;
+    else if (EJ.plL || EJ.plV) { setMsg("qa-ej-msg", "En el pleno al 15 marca los dos equipos (o ninguno)", "err"); return; }
+    var btn = $("qa-ej-guardar");
+    btn.disabled = true;
+    setMsg("qa-ej-msg", "Guardando...");
+    try {
+      var r = await post({ action: "guardarJugador", original: EJ.orig, nombre: nombre, picks: EJ.picks, p15: p15 });
+      if (r.resultado === "ok") {
+        EJ.orig = nombre;
+        await refrescarTrasEditar(nombre);
+        $("qa-ej-eliminar").style.display = "block";
+        setMsg("qa-ej-msg", "✅ Jugador guardado: " + nombre, "ok");
+      } else setMsg("qa-ej-msg", r.error || "Error", "err");
+    } catch (e) { setMsg("qa-ej-msg", "Error de conexión", "err"); }
+    btn.disabled = false;
+  };
+
+  $("qa-ej-eliminar").onclick = async function () {
+    if (!EJ.orig) return;
+    if (!confirm("¿Borrar a «" + EJ.orig + "» y todas sus apuestas? No se puede deshacer.")) return;
+    var btn = $("qa-ej-eliminar");
+    btn.disabled = true;
+    setMsg("qa-ej-msg", "Borrando...");
+    try {
+      var r = await post({ action: "borrarJugador", nombre: EJ.orig });
+      if (r.resultado === "ok") {
+        var borrado = EJ.orig;
+        await refrescarTrasEditar("");
+        cerrarEditorJugador();
+        setMsg("qa-ej-msg", "✅ Jugador borrado: " + borrado, "ok");
+      } else setMsg("qa-ej-msg", r.error || "Error", "err");
+    } catch (e) { setMsg("qa-ej-msg", "Error de conexión", "err"); }
+    btn.disabled = false;
+  };
+
   /* ---------- Importar Excel / texto pegado ---------- */
   var IMP = null;
 
@@ -618,7 +809,7 @@
       var r = await post({ action: "importar", partidos: IMP.partidos, pronosticos: IMP.pronosticos, global: IMP.global, vaciar: $("qa-imp-vaciar").checked });
       if (r.resultado === "ok") {
         DATA = await leerDatos();
-        pintarEstado(); pintarEspecial(); pintarPartidos(); pintarPremios(); pintarGlobal(); pintarHistorial();
+        pintarEstado(); pintarEspecial(); pintarPartidos(); pintarPremios(); pintarGlobal(); pintarHistorial(); pintarJugadores();
         $("qa-imp-file").value = ""; $("qa-imp-text").value = "";
         setMsg("qa-imp-msg", "✅ Importado: " + r.partidos + " partidos y " + r.jugadores + " jugadores. Recuerda pulsar «Abrir quiniela» cuando quieras que se pueda jugar.", "ok");
       } else setMsg("qa-imp-msg", r.error || "Error", "err");

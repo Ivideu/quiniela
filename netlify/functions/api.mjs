@@ -246,6 +246,39 @@ async function admin(data) {
       await guardar(d);
       return json({ resultado: "ok", partidos: d.partidos.length - 1, jugadores: d.pronosticos.length - 1 });
     }
+    case "guardarJugador": {
+      // Edición manual desde el admin: sirve aunque la quiniela esté cerrada. Permite crear, corregir y renombrar.
+      const nombre = str(data.nombre);
+      if (!nombre) return json({ resultado: "error", error: "Falta el nombre" });
+      if (nombre.toLowerCase() === "nombre") return json({ resultado: "error", error: "Ese nombre no es válido" });
+      const orig = str(data.original);
+      const picks = Array.isArray(data.picks) ? data.picks : [];
+      const fila = [nombre];
+      for (let i = 0; i < 14; i++) { const v = norm(picks[i]); fila.push(v === "1" || v === "X" || v === "2" ? v : ""); }
+      const p15 = norm15(data.p15);
+      if (!(p15 === "" || esPleno(p15))) return json({ resultado: "error", error: "Pleno al 15 no válido" });
+      fila.push(p15);
+      const mismo = (f, n) => str(f[0]).toLowerCase() === n.toLowerCase();
+      const idxOrig = orig ? d.pronosticos.findIndex((f, i) => i > 0 && mismo(f, orig)) : -1;
+      const idxDup = d.pronosticos.findIndex((f, i) => i > 0 && i !== idxOrig && mismo(f, nombre));
+      if (idxDup > 0) return json({ resultado: "error", error: "Ya existe un jugador con ese nombre" });
+      if (idxOrig > 0) {
+        d.pronosticos[idxOrig] = fila;
+        if (orig.toLowerCase() !== nombre.toLowerCase() || orig !== nombre) {
+          d.global = d.global.map((g, i) => (i > 0 && mismo(g, orig)) ? [nombre, g[1]] : g);   // conserva sus victorias
+        }
+      } else d.pronosticos.push(fila);
+      await guardar(d);
+      return json({ resultado: "ok" });
+    }
+    case "borrarJugador": {
+      const nombre = str(data.nombre);
+      const idx = d.pronosticos.findIndex((f, i) => i > 0 && str(f[0]).toLowerCase() === nombre.toLowerCase());
+      if (!nombre || idx < 1) return json({ resultado: "error", error: "Jugador no encontrado" });
+      d.pronosticos.splice(idx, 1);
+      await guardar(d);
+      return json({ resultado: "ok" });
+    }
     case "abrirQuiniela": {
       const cierre = proximoCierre(Date.now());
       d.config = { ...(d.config || {}), abierta: true, cierre };
