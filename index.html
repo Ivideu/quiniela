@@ -40,6 +40,12 @@
       overflow-x: hidden;
     }
 
+    /* Texto solo para lectores de pantalla */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
     /* Símbolos 1 X 2 flotando de fondo */
     .bg-symbols { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
     .bg-symbols span {
@@ -68,7 +74,7 @@
       position: relative;
       overflow: hidden;
       border-radius: 18px;
-      padding: 28px 24px 24px;
+      padding: 16px 16px 24px;
       color: #fff;
       text-align: center;
       background: linear-gradient(135deg, #0077cc, #00a6d6, #1f5fbf);
@@ -87,27 +93,27 @@
       width: 160px; height: 160px;
       border-radius: 50%;
       background: rgba(255,255,255,.10);
+      pointer-events: none;
     }
-    .ball {
-      display: inline-block;
-      font-size: 44px;
-      animation: bounce 1.6s cubic-bezier(.3,.8,.4,1) infinite;
-      transform-origin: bottom center;
+
+    /* Carrusel de fotos (una distinta cada 2 s) */
+    .carrusel {
+      position: relative;
+      z-index: 1;
+      border-radius: 14px;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      background: rgba(255,255,255,.18);
+      box-shadow: 0 6px 18px rgba(0,40,90,.25);
     }
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0) rotate(0); }
-      45% { transform: translateY(-16px) rotate(180deg); }
-      60% { transform: translateY(0) rotate(240deg) scale(1.08, .92); }
+    .carrusel img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity .6s ease;
     }
-    .hero h1 { margin: 6px 0 4px; font-size: 30px; letter-spacing: .5px; }
-    .tagline {
-      margin: 0;
-      min-height: 22px;
-      font-size: 25px;
-      opacity: .95;
-      transition: opacity .4s ease;
-      color: #fbff07;
-    }
+    .carrusel img.on { opacity: 1; }
 
     /* Cuenta atrás */
     .countdown {
@@ -245,7 +251,6 @@
     footer { text-align: center; margin: 22px 0 8px; font-size: 12px; color: var(--muted); }
 
     @media (max-width: 380px) {
-      .hero h1 { font-size: 26px; }
       .countdown div { width: 54px; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -260,9 +265,8 @@
 
   <div class="container">
     <header class="hero">
-      <div class="ball" aria-hidden="true">⚽</div>
-      <h1>Tu Quiniela</h1>
-      <p class="tagline" id="tagline">La bola de cristal de Rubén dice que el lunes presento la dimisión</p>
+      <h1 class="sr-only">Tu Quiniela</h1>
+      <div class="carrusel" id="carrusel" aria-label="Fotos"></div>
 
       <div id="cdBloque">
         <div class="countdown" aria-live="off">
@@ -329,27 +333,57 @@
       }
     })();
 
-    /* ---- Frases rotativas ---- */
+    /* ---- Carrusel de fotos: una distinta cada 2 segundos ----
+       Pon aquí las rutas de tus fotos (carpeta "fotos" en la raíz de la web, por ejemplo).
+       Si alguna no carga, se salta sola. */
     (function () {
-      var el = document.getElementById('tagline');
-      var frases = [
-        'Tranquilos, no pido un yate 🚢... con que me paguéis la hipoteca me vale 💰',
-        '🧙‍♀️ Contarnos el secreto 🔮',
-        'Si no queréis hacerme rico 💰 por amor, hacedlo por miedo a lo que haré si no acertáis 🔪',
-        'Hoy no jugamos al fútbol ⚽, jugamos a jubilar 👴 a Iván antes de tiempo',
-        'Inversión de alto riesgo: si sale mal perdemos 6 euros, si sale bien, Iván se jubila 👴 en el norte 🐑',
-        'Recordad: cada casilla que marquéis mal es un paso más hacia mi venganza familiar 🔪',
-        '🧙‍♀️ Si hablaran vuestros trucos 🔮'
+      var FOTOS = [
+        'fotos/1.jpg',
+        'fotos/2.jpg',
+        'fotos/3.jpg',
+        'fotos/4.jpg'
       ];
-      var i = 0;
-      setInterval(function () {
-        el.style.opacity = 0;
-        setTimeout(function () {
-          i = (i + 1) % frases.length;
-          el.textContent = frases[i];
-          el.style.opacity = 1;
-        }, 400);
-      }, 4000);
+      var INTERVALO = 2000;   // milisegundos entre foto y foto
+
+      var box = document.getElementById('carrusel');
+      var imgs = [], n = 0, timer = null;
+
+      function arrancar() {
+        if (timer || imgs.length < 2) return;
+        timer = setInterval(function () {
+          if (document.hidden) return;
+          imgs[n].classList.remove('on');
+          n = (n + 1) % imgs.length;
+          imgs[n].classList.add('on');
+        }, INTERVALO);
+      }
+
+      function quitar(im) {
+        var k = imgs.indexOf(im);
+        if (k === -1) return;
+        var eraLaActual = (k === n);
+        imgs.splice(k, 1);
+        im.remove();
+        if (!imgs.length) { box.style.display = 'none'; return; }
+        if (k < n) n--;
+        if (n >= imgs.length) n = 0;
+        if (eraLaActual) imgs[n].classList.add('on');
+        if (imgs.length < 2 && timer) { clearInterval(timer); timer = null; }
+      }
+
+      FOTOS.forEach(function (src, i) {
+        var im = document.createElement('img');
+        im.alt = '';
+        im.decoding = 'async';
+        im.onerror = function () { quitar(im); };
+        im.src = src;
+        box.appendChild(im);
+        imgs.push(im);
+      });
+
+      if (!imgs.length) { box.style.display = 'none'; return; }
+      imgs[0].classList.add('on');
+      arrancar();
     })();
 
     /* ---- Cuenta atrás + estado de la quiniela ----

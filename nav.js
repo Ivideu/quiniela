@@ -14,14 +14,15 @@
     { id: "index",       href: "index.html",       icono: "🏠", texto: "Inicio",        c: "#0077cc", t: "#ffffff" },
     { id: "pronosticos", href: "pronosticos.html", icono: "📊", texto: "Apuestas",      c: "#22a06b", t: "#ffffff" },
     { id: "escrutinio",  href: "escrutinio.html",  icono: "💰", texto: "Dinero",        c: "#ffb703", t: "#222222" },
-    { id: "global",      href: "global.html",      icono: "🏆", texto: "Clasificación", c: "#8e5bd6", t: "#ffffff" }
+        { id: "global",      href: "global.html",  icono: "🏆", texto: "Clasificación", c: "#8e5bd6", t: "#ffffff" },
+    { id: "admin",       href: "index.html#admin", icono: "🔐", texto: "Admin",         c: "#4a5568", t: "#ffffff", admin: true }
   ];
 
   /* ---------- Estilos (todos acotados a #qnav) ---------- */
   var css = [
     "#qnav{position:fixed;top:0;left:0;right:0;z-index:40;padding:8px 10px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 4px 18px rgba(0,60,120,.14);font-family:'Segoe UI',system-ui,sans-serif}",
     "#qnav *{box-sizing:border-box}",
-    "#qnav .qn-in{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}",
+    "#qnav .qn-in{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:8px}",
     "#qnav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;padding:7px 4px;border-radius:12px;background:#fff;color:#333;text-decoration:none;font-size:12px;font-weight:700;line-height:1.15;text-align:center;border:1px solid #dbe6f1;border-top:4px solid var(--c);box-shadow:0 4px 12px rgba(0,60,120,.08);transition:transform .18s ease,box-shadow .18s ease,background .2s,color .2s;-webkit-tap-highlight-color:transparent}",
     "#qnav a .qn-i{font-size:20px;line-height:1;transition:transform .25s}",
     "#qnav a .qn-t{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
@@ -59,6 +60,13 @@
     a.href = l.href;
     a.style.setProperty("--c", l.c);
     a.style.setProperty("--t", l.t);
+    if (l.admin) {
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        if (typeof window.abrirAdmin === "function") window.abrirAdmin();
+        else location.href = "index.html#admin";   // en otras páginas sin admin.js
+      });
+    }
     if (l.id === actual || (l.id === "index" && esInicio)) {
       a.className = "qn-on";
       a.setAttribute("aria-current", "page");

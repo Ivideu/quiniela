@@ -227,7 +227,11 @@
     setTimeout(function () { $("qa-pass").focus(); }, 50);
   }
   function cerrar() { overlay.style.display = "none"; }
-
+  window.abrirAdmin = abrir;                       // lo usa el botón Admin de nav.js
+  if (location.hash === "#admin") {                // llegada desde el botón Admin de otra página
+    history.replaceState(null, "", location.pathname + location.search);
+    abrir();
+  }
   $("qa-cancelar").onclick = cerrar;
   $("qa-cerrar").onclick = cerrar;
   overlay.addEventListener("mousedown", function (e) { if (e.target === overlay) cerrar(); });
